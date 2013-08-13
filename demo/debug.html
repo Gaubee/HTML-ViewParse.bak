@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>HTML-ViewParse</title>
+	<script type="text/javascript" src="../build/0.3/HTML-ViewParse.debug.js"></script>
+</head>
+<body>
+	<h1>???x?</h1>
+	<pre>
+		<[\w\W]+?[\w]+?[\s]*?\=[\w\W]+?\{\{[\w\W]+?\}\}[\w\W]+?>
+		<[\w\W]+?[\s]*?[\w]+?[\s]*?\=[\w\W]+?\{\{[\w\W]+?\}\}[\w\W]+?>
+		(\S+)=["']?((?:.(?!["']?\s+(?:\S+)=|[>"']))+.)["']?	
+
+	</pre>
+	
+
+</body>
+	
+<script type="text/template" name="me">
+	I am a {#if{ {equa{ {{sex}}{{'woman'}} }} }}girl({{sex}}){#else{}}boy{/if{}}.
+	<hr />
+	<div>
+		<input value="{{name}}"><br	/>
+		my name is {{name}}.
+	</div>
+</script>
+
+<script type="text/template" name="if!">
+	<hr/>
+	<h2>haha!</h2>
+	{#if{ {{love}} }}
+		you are my love!
+	{#else{}}
+		I am what I am...
+		{#if{ {{too_young_too_simple}} }}
+			But I am eager to love.
+		{#else{}}
+			No Country For Old Men.
+		{/if{}}
+	{/if{}}
+</script>
+</html>
+
+<script type="text/javascript">
+	ViewParser.scans();
+</script>
+<script type="text/javascript">
+	var n = ViewParser.modules["me"];
+	var b = n();
+	console.log(b);
+	b.append(document.body);
+	setTimeout(function (argument) {
+		b.set("sex","man");
+		b.set("name","Gaubee");
+	},100)
+	setTimeout(function (argument) {
+		b.set("sex","woman");
+		b.set("name","Lisa");
+	},2000)
+</script>
+<script type="text/javascript">
+	var aboutLove = ViewParser.modules["if!"];
+	var s = aboutLove();
+	s.append(document.body);
+	setTimeout(function() {
+		s.set("love", true);
+		setTimeout(function() {
+			s.set("love", false);
+			setTimeout(function() {
+				s.set("too_young_too_simple", false);
+				setTimeout(function() {
+					s.set("too_young_too_simple", true);
+				}, 500);
+			}, 500);
+		}, 500);
+	}, 500);
+</script>

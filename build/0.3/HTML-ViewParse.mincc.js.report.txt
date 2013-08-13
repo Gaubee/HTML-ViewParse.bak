@@ -1,0 +1,5 @@
+build/0.3/HTML-ViewParse.js:1: WARNING - Suspicious code. The result of the 'not' operator is not being used.
+!(function viewParse(global) {
+^
+
+0 error(s), 1 warning(s)
