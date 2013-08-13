@@ -3,9 +3,10 @@ var _parse = function(node) {
 	for (var i = 0, child_node, childNodes = node.childNodes; child_node = childNodes[i]; i += 1) {
 		switch (child_node.nodeType) {
 			case 3:
-				if ($.trim(child_node.textContent)) {
-					// console.log("node|(text):", child_node.textContent);
-					result[result.length] = TextHandle(child_node);
+				// console.log("child_node.data",child_node.data)
+				if ($.trim(child_node.data)) {
+					// console.log("node|(text):", child_node.data);
+					$.push(result, TextHandle(child_node))
 				}
 				break;
 			case 1:
@@ -65,6 +66,9 @@ function TemplateHandle(handleName, node) {
 	this.childNodes = _parse(node);
 	this.id = $.uid();
 	this._triggers = [];
+	this._controllers = [];
+	this._controllers[true] = [];
+	this._controllers[false] = [];
 };
 TemplateHandle.prototype = Handle("handle", {
 	ignore: true,
@@ -85,6 +89,9 @@ function ElementHandle(node) {
 	this.childNodes = _parse(node);
 	this.id = $.uid();
 	this._triggers = [];
+	this._controllers = [];
+	this._controllers[true] = [];
+	this._controllers[false] = [];
 };
 ElementHandle.prototype = Handle("element", {
 	nodeType: 1
@@ -100,6 +107,9 @@ function TextHandle(node) {
 	this.node = node;
 	this.id = $.uid();
 	// this._triggers = [];
+	this._controllers = [];
+	this._controllers[true] = [];
+	this._controllers[false] = [];
 };
 TextHandle.prototype = Handle("text", {
 	nodeType: 3

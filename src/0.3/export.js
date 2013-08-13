@@ -15,50 +15,56 @@ function parseRule(str) {
 
 var V = global.ViewParser = {
 	parse: function(htmlStr) {
-		shadowBody.innerHTML = htmlStr;
+		var _shadowBody = $.DOM.clone(shadowBody);
+		_shadowBody.innerHTML = htmlStr;
+		// console.log("htmlStr:",htmlStr)
 		var insertBefore = [];
-		_traversal(shadowBody, function(node, index, parentNode) {
+		_traversal(_shadowBody, function(node, index, parentNode) {
 			if (node.nodeType === 3) {
-				shadowDIV.innerHTML = parseRule(node.textContent);
 				$.push(insertBefore, {
 					baseNode: node,
 					parentNode: parentNode,
-					insertNodes: [].slice.call(shadowDIV.childNodes)
+					insertNodesHTML: parseRule(node.data)
 				});
 			}
 		});
-		for (var i = 0, item; item = insertBefore[i]; i += 1) {
+		$.forEach(insertBefore,function(item){
 			var node = item.baseNode,
 				parentNode = item.parentNode
-				insertNodes = item.insertNodes;
-			for (var j = 0, refNode; refNode = insertNodes[j]; j += 1) {
-				parentNode.insertBefore(refNode, node);
-			}
+				insertNodesHTML = item.insertNodesHTML;
+				shadowDIV.innerHTML = parseRule(insertNodesHTML);
+			//Using innerHTML rendering is complete immediate operation DOM, 
+			//innerHTML otherwise covered again, the node if it is not, 
+			//then memory leaks, IE can not get to the full node.
+			$.forEach(shadowDIV.childNodes,function(refNode){
+				$.DOM.insertBefore(parentNode,refNode, node)
+			})
 			parentNode.removeChild(node);
-		}
-		shadowBody.innerHTML = shadowBody.innerHTML;
-		var result = ElementHandle(shadowBody);
+		});
+		_shadowBody.innerHTML = _shadowBody.innerHTML;
+		// console.log("_shadowBody.innerHTML:",_shadowBody.innerHTML)
+		var result = ElementHandle(_shadowBody);
 		return View(result);
 	},
 	scans: function() {
-		els = document.getElementsByTagName("script")
-		for (var i = 0, el; el = els[i]; i += 1) {
-			if (el.getAttribute("type") === "text/template") {
-				V.modules[el.getAttribute("name")] = V.parse(el.innerText);
+		els = 
+		$.forEach(document.getElementsByTagName("script"),function(scriptNode){
+			if (scriptNode.getAttribute("type") === "text/template") {
+				V.modules[scriptNode.getAttribute("name")] = V.parse(scriptNode.innerHTML);
 			}
-		}
+		});
 	},
 	registerTrigger: function(handleName, triggerFactory) {
-		try {
+		// try {
 			V.triggers[handleName] = triggerFactory;
-		} catch (e) {
-			console.wran(e.message)
-		}
+		// } catch (e) {
+		// 	console.wran(e.message)
+		// }
 	},
 	registerHandle: function(handleName, handle) {
-		if (V.handles[handleName]) {
-			throw handleName + " handler already exists.";
-		}
+		// if (V.handles[handleName]) {
+		// 	throw handleName + " handler already exists.";
+		// }
 		V.handles[handleName] = handle
 	},
 	triggers: {},

@@ -38,6 +38,18 @@ var $ = {
 	unshift: function(arr, item) {
 		arr.splice(0, 0, item);
 	},
+	slice: function(likeArr) {
+		var array;
+		try {
+			array = Array.prototype.slice.call(likeArr, 0); //non-IE and IE9+
+		} catch (ex) {
+			array = [];
+			for (var i = 0, len = likeArr.length; i < len; i++) {
+				array.push(likeArr[i]);
+			}
+		}
+		return array;
+	},
 	pushByID: function(arr, item) {
 		arr[item.id] = item;
 		return item;
@@ -102,27 +114,31 @@ var $ = {
 			callback(obj[i], i, obj);
 		}
 	},
+	reverseEach:function(arr,callback,i){
+		if (!arr) return;
+		return this._each($.slice(arr).reverse(), callback, arr.length-1-i)
+	},
 	forEach: function(arr, callback, i) {
 		if (!arr) return;
-		arr = [].slice.call(arr);
+		return this._each($.slice(arr), callback, i)
+	},
+	_each:function(arr,callback,i){
 		for (i = i || 0; i < arr.length; i += 1) {
 			if (callback(arr[i], i, arr) === false) break;
 		}
 	},
 	create: function(proto) {
-		var fn = function proto() {};
-		fn.prototype = proto;
-		return new fn;
+		_Object_create_noop.prototype = proto;
+		return new _Object_create_noop;
 	},
 	DOM: {
-		Comment:function(info){
+		Comment: function(info) {
 			return document.createComment(info)
 		},
 		insertBefore: function(parentNode, insertNode, beforNode) {
-			if (!parentNode) {
-				parentNode = beforNode.parentNode;
-			}
-			parentNode.insertBefore(insertNode, beforNode);
+			// try{
+			parentNode.insertBefore(insertNode, beforNode||null);
+			// }catch(e){}
 		},
 		append: function(parentNode, node) {
 			parentNode.appendChild(node);
@@ -136,14 +152,16 @@ var $ = {
 				parentNode.removeChild(node)
 			}
 		},
-		replace:function(parentNode,new_node,old_node){
-			try{
-			parentNode.replaceChild(new_node,old_node);
-			}catch(e){}
+		replace: function(parentNode, new_node, old_node) {
+			try {
+				parentNode.replaceChild(new_node, old_node);
+			} catch (e) {}
 		},
 		traversal: _traversal
 	}
 };
+var _Object_create_noop = function proto() {};
+
 var _traversal = function(node, callback) {
 	for (var i = 0, child_node, childNodes = node.childNodes; child_node = childNodes[i]; i += 1) {
 		var result = callback(child_node, i, node);
@@ -165,18 +183,22 @@ function View(arg) {
 	self._handles = [];
 	self._triggers = {}; //bey key word
 
-	
+
 	_buildHandler.call(self);
 	_buildTrigger.call(self);
 	// _traversal(this.handleNodeTree, function(node, index, parentNode) {
 	// 	View.u[node.id] = node;
 	// });
-	return $.bind(create, this);
+	// return $.bind(_create, this);
+	return function(data) {
+		return _create.call(self, data);
+	}
 };
 
 function _buildHandler(handleNodeTree) {
-	handleNodeTree = handleNodeTree || this.handleNodeTree;
-	var handles = this._handles
+	var self = this,
+		handles = self._handles
+		handleNodeTree = handleNodeTree || self.handleNodeTree;
 	_traversal(handleNodeTree, function(item_node, index, handleNodeTree) {
 		// console.log(item_node, index, handleNodeTree)
 		item_node.parentNode = handleNodeTree;
@@ -217,43 +239,50 @@ function _buildTrigger(handleNodeTree) {
 		}
 	});
 };
-function create(data) {
-		var NodeList_of_ViewInstance = {}; //save newDOM  without the most top of parentNode -- change with append!!
-		var topNode = ($.pushByID(NodeList_of_ViewInstance, $.create(this.handleNodeTree)).currentNode = $.DOM.clone(shadowBody));
-		_traversal(this.handleNodeTree, function(node, index, parentNode) {
-			node = $.pushByID(NodeList_of_ViewInstance, $.create(node));
-			if (!node.ignore) {
-				var currentParentNode = NodeList_of_ViewInstance[parentNode.id].currentNode || topNode;
-				var currentNode = node.currentNode = $.DOM.clone(node.node);
-				$.DOM.append(currentParentNode, currentNode);
-				// if (node.type === "comment") {
-				// 	console.log(node.id,node.currentNode,NodeList_of_ViewInstance[node.id]);
-				// }
-			}
-		});
+
+function _create(data) {
+	var self = this,
+		NodeList_of_ViewInstance = {}, //save newDOM  without the most top of parentNode -- change with append!!
+		topNode = $.create(self.handleNodeTree);
+	topNode.currentNode = $.DOM.clone(shadowBody);
+	$.pushByID(NodeList_of_ViewInstance, topNode);
+
+	_traversal(topNode, function(node, index, parentNode) {
+		node = $.pushByID(NodeList_of_ViewInstance, $.create(node));
+		if (!node.ignore) {
+			var currentParentNode = NodeList_of_ViewInstance[parentNode.id].currentNode || topNode.currentNode;
+			var currentNode = node.currentNode = $.DOM.clone(node.node);
+			$.DOM.append(currentParentNode, currentNode);
+			// if (node.type === "comment") {
+			// 	console.log(node.id,node.currentNode,NodeList_of_ViewInstance[node.id]);
+			// }
+		}
+	});
 
 
-		// _traversal(this.handleNodeTree, function(node, index, parentNode) {
-		// 	if (!node.ignore && node.display) { //build DOM construction
-		// 		parentNode = node.parentNode;
-		// 		$.DOM.append(parentNode.newNode, node.newNode)
-		// 	}
-		// 	var item = {
-		// 		currentNode: node.newNode,
-		// 		triggers: [],
-		// 		viewParseNode: node
-		// 	};
-		// 	// console.log(node.type,node.id)
-		// 	$.push(DOMs, item);
-		// 	DOMs["hashid|" + node.id] = item;
-		// });
-		$.forEach(this._handles, function(handle) {
-			// handle(NodeList_of_ViewInstance);
-			handle.call(this, NodeList_of_ViewInstance);
-		});
-		// console.log(this.handleNodeTree.newNode, DOMs);
-		return ViewInstance(this.handleNodeTree, NodeList_of_ViewInstance, this._triggers);
-	}
+	// _traversal(self.handleNodeTree, function(node, index, parentNode) {
+	// 	if (!node.ignore && node.display) { //build DOM construction
+	// 		parentNode = node.parentNode;
+	// 		$.DOM.append(parentNode.newNode, node.newNode)
+	// 	}
+	// 	var item = {
+	// 		currentNode: node.newNode,
+	// 		triggers: [],
+	// 		viewParseNode: node
+	// 	};
+	// 	// console.log(node.type,node.id)
+	// 	$.push(DOMs, item);
+	// 	DOMs["hashid|" + node.id] = item;
+	// });
+	$.forEach(self._handles, function(handle) {
+		// handle(NodeList_of_ViewInstance);
+		handle.call(self, NodeList_of_ViewInstance);
+	});
+	// console.log(self.handleNodeTree.newNode, DOMs);
+
+	// console.log("ViewInstance", ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers))
+	return ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers);
+};
 /*
  * View Instance constructor
  */
@@ -264,7 +293,7 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	}
 	var self = this;
 	self.handleNodeTree = handleNodeTree;
-	self.DOMArr = [].slice.call(handleNodeTree.childNodes);
+	self.DOMArr = $.slice(handleNodeTree.childNodes);
 	self.NodeList = NodeList;
 	self._database = database || {};
 	self._triggers = {};
@@ -277,12 +306,28 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	});
 };
 function _bubbleTrigger(tiggerCollection,NodeList,database,eventTrigger){
+	var self = this;
 	$.forEach(tiggerCollection,function(trigger){
+		// if (trigger.chain) {
+		// 	console.log("key:",trigger.key,trigger,",chain!!")
+		// 	var chainTriggers = self._triggers[trigger.key],
+		// 		index = $.indexOf(chainTriggers,trigger);
+		// 	for(var i = 0;i<index;i+=1){
+				
+		// 	}
+		// }
 		trigger.event(NodeList,database,eventTrigger);
 		if (trigger.bubble) {
 			var parentNode = NodeList[trigger.handleId].parentNode;
-			parentNode&&_bubbleTrigger(parentNode._triggers,NodeList,database,trigger);
+			parentNode&&_bubbleTrigger.apply(self,[parentNode._triggers,NodeList,database,trigger]);
 		}
+		// if (trigger.chain) {
+		// 	$.forEach(chainTriggers,function(chain_trigger){
+		// 		console.log("chain:",chain_trigger)
+		// 		chain_trigger.event(NodeList,database,trigger);
+		// 	},index+1);
+		// 	console.log(index,chainTriggers);
+		// };
 	});
 };
 ViewInstance.prototype = {
@@ -297,8 +342,8 @@ ViewInstance.prototype = {
 		});
 		NodeList[handleNodeTree.id].currentNode = el;
 	},
-	_database: null,
-	_triggers: null,
+	// _database: null,
+	// _triggers: null,
 	get: function get(key) {},
 	set: function set(key, value) {
 		var self = this,
@@ -308,7 +353,7 @@ ViewInstance.prototype = {
 		if (oldValue != value) {
 			self._database[key] = value;
 		}
-		_bubbleTrigger(self._triggers[key],NodeList,database)
+		_bubbleTrigger.apply(self,[self._triggers[key],NodeList,database])
 	}
 };
 var _parse = function(node) {
@@ -316,9 +361,10 @@ var _parse = function(node) {
 	for (var i = 0, child_node, childNodes = node.childNodes; child_node = childNodes[i]; i += 1) {
 		switch (child_node.nodeType) {
 			case 3:
-				if ($.trim(child_node.textContent)) {
-					// console.log("node|(text):", child_node.textContent);
-					result[result.length] = TextHandle(child_node);
+				// console.log("child_node.data",child_node.data)
+				if ($.trim(child_node.data)) {
+					// console.log("node|(text):", child_node.data);
+					$.push(result, TextHandle(child_node))
 				}
 				break;
 			case 1:
@@ -378,6 +424,9 @@ function TemplateHandle(handleName, node) {
 	this.childNodes = _parse(node);
 	this.id = $.uid();
 	this._triggers = [];
+	this._controllers = [];
+	this._controllers[true] = [];
+	this._controllers[false] = [];
 };
 TemplateHandle.prototype = Handle("handle", {
 	ignore: true,
@@ -398,6 +447,9 @@ function ElementHandle(node) {
 	this.childNodes = _parse(node);
 	this.id = $.uid();
 	this._triggers = [];
+	this._controllers = [];
+	this._controllers[true] = [];
+	this._controllers[false] = [];
 };
 ElementHandle.prototype = Handle("element", {
 	nodeType: 1
@@ -413,6 +465,9 @@ function TextHandle(node) {
 	this.node = node;
 	this.id = $.uid();
 	// this._triggers = [];
+	this._controllers = [];
+	this._controllers[true] = [];
+	this._controllers[false] = [];
 };
 TextHandle.prototype = Handle("text", {
 	nodeType: 3
@@ -452,50 +507,56 @@ function parseRule(str) {
 
 var V = global.ViewParser = {
 	parse: function(htmlStr) {
-		shadowBody.innerHTML = htmlStr;
+		var _shadowBody = $.DOM.clone(shadowBody);
+		_shadowBody.innerHTML = htmlStr;
+		// console.log("htmlStr:",htmlStr)
 		var insertBefore = [];
-		_traversal(shadowBody, function(node, index, parentNode) {
+		_traversal(_shadowBody, function(node, index, parentNode) {
 			if (node.nodeType === 3) {
-				shadowDIV.innerHTML = parseRule(node.textContent);
 				$.push(insertBefore, {
 					baseNode: node,
 					parentNode: parentNode,
-					insertNodes: [].slice.call(shadowDIV.childNodes)
+					insertNodesHTML: parseRule(node.data)
 				});
 			}
 		});
-		for (var i = 0, item; item = insertBefore[i]; i += 1) {
+		$.forEach(insertBefore,function(item){
 			var node = item.baseNode,
 				parentNode = item.parentNode
-				insertNodes = item.insertNodes;
-			for (var j = 0, refNode; refNode = insertNodes[j]; j += 1) {
-				parentNode.insertBefore(refNode, node);
-			}
+				insertNodesHTML = item.insertNodesHTML;
+				shadowDIV.innerHTML = parseRule(insertNodesHTML);
+			//Using innerHTML rendering is complete immediate operation DOM, 
+			//innerHTML otherwise covered again, the node if it is not, 
+			//then memory leaks, IE can not get to the full node.
+			$.forEach(shadowDIV.childNodes,function(refNode){
+				$.DOM.insertBefore(parentNode,refNode, node)
+			})
 			parentNode.removeChild(node);
-		}
-		shadowBody.innerHTML = shadowBody.innerHTML;
-		var result = ElementHandle(shadowBody);
+		});
+		_shadowBody.innerHTML = _shadowBody.innerHTML;
+		// console.log("_shadowBody.innerHTML:",_shadowBody.innerHTML)
+		var result = ElementHandle(_shadowBody);
 		return View(result);
 	},
 	scans: function() {
-		els = document.getElementsByTagName("script")
-		for (var i = 0, el; el = els[i]; i += 1) {
-			if (el.getAttribute("type") === "text/template") {
-				V.modules[el.getAttribute("name")] = V.parse(el.innerText);
+		els = 
+		$.forEach(document.getElementsByTagName("script"),function(scriptNode){
+			if (scriptNode.getAttribute("type") === "text/template") {
+				V.modules[scriptNode.getAttribute("name")] = V.parse(scriptNode.innerHTML);
 			}
-		}
+		});
 	},
 	registerTrigger: function(handleName, triggerFactory) {
-		try {
+		// try {
 			V.triggers[handleName] = triggerFactory;
-		} catch (e) {
-			console.wran(e.message)
-		}
+		// } catch (e) {
+		// 	console.wran(e.message)
+		// }
 	},
 	registerHandle: function(handleName, handle) {
-		if (V.handles[handleName]) {
-			throw handleName + " handler already exists.";
-		}
+		// if (V.handles[handleName]) {
+		// 	throw handleName + " handler already exists.";
+		// }
 		V.handles[handleName] = handle
 	},
 	triggers: {},
@@ -566,10 +627,11 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 		// comment_if_id = $.lastItem(handle.childNodes).id,
 		comment_else_id,
 		comment_endif_id,
-		conditionDOM = {
-			"true": [], //true is "if"
-			"false": [] //false is "else"
-		},
+		conditionDOM = handle._controllers,
+		// = {
+		// 	"true": [], //true is "if"
+		// 	"false": [] //false is "else"
+		// },
 		conditionStatus = true, //"if";
 		trigger,
 		deep = 0;
@@ -577,6 +639,8 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 		// if (child_handle.type !== "handle") {
 		if (!ignoreHandleType.test(child_handle.type)) {
 			// console.log(child_handle)
+			$.push(child_handle._controllers, id);
+			// $.push(child_handle._controllers[conditionStatus])
 			$.push(conditionDOM[conditionStatus], child_handle.id);
 		} else if (child_handle.handleName === "#if") {
 			deep += 1
@@ -593,15 +657,16 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 			}
 		}
 	}, index); // no (index + 1):scan itself:deep === 0 --> conditionStatus = !conditionStatus;
-	console.log(conditionDOM);
+	// console.log(conditionDOM);
 	trigger = {
 		// key:"",//default is ""
-		event: function(NodeList_of_ViewInstance) {
+		chain: true,
+		event: function(NodeList_of_ViewInstance, database, triggerBy) {
 			var conditionVal = NodeList_of_ViewInstance[conditionHandleId]._data,
 				parentNode = NodeList_of_ViewInstance[parentHandleId].currentNode,
 				markHandleId = comment_else_id, //if(true)
 				markHandle; //default is undefined --> insertBefore === appendChild
-			if (NodeList_of_ViewInstance[this.handleId]._data !== conditionVal) {
+			if (NodeList_of_ViewInstance[this.handleId]._data !== conditionVal || triggerBy) {
 				NodeList_of_ViewInstance[this.handleId]._data = conditionVal;
 				if (!conditionVal) {
 					markHandleId = comment_endif_id;
@@ -610,19 +675,26 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 					markHandle = NodeList_of_ViewInstance[markHandleId].currentNode;
 				}
 				$.forEach(conditionDOM[conditionVal], function(id) {
-					var node = NodeList_of_ViewInstance[id].currentNode;
-					var placeholderNode = (NodeList_of_ViewInstance[id].placeholderNode = NodeList_of_ViewInstance[id].placeholderNode||$.DOM.Comment(id));
-					// console.log("insertBefore", node, markHandle, id, markHandleId, parentNode);
-					// $.DOM.insertBefore(parentNode, node, markHandle)
-					console.log(parentNode, node, placeholderNode)
-					$.DOM.replace(parentNode, node, placeholderNode)
+					var currentHandle = NodeList_of_ViewInstance[id],
+						node = currentHandle.currentNode,
+						placeholderNode = (NodeList_of_ViewInstance[id].placeholderNode = NodeList_of_ViewInstance[id].placeholderNode || $.DOM.Comment(id)),
+						display = true;
+					// console.log(node,currentHandle._controllers)
+					$.forEach(currentHandle._controllers,function(controller_id){
+						var controllerHandle = NodeList_of_ViewInstance[controller_id]
+						//console.log(controllerHandle._data,controllerHandle._controllers,controllerHandle._controllers[controllerHandle._data])
+						display = display&&($.indexOf(controllerHandle._controllers[controllerHandle._data?true:false],currentHandle.id)!==-1);
+					});
+					if (display) {
+						$.DOM.replace(parentNode, node, placeholderNode)
+					}
 				});
 				$.forEach(conditionDOM[!conditionVal], function(id) {
 					var node = NodeList_of_ViewInstance[id].currentNode;
-					var placeholderNode = (NodeList_of_ViewInstance[id].placeholderNode = NodeList_of_ViewInstance[id].placeholderNode||$.DOM.Comment(id));
+					var placeholderNode = (NodeList_of_ViewInstance[id].placeholderNode = NodeList_of_ViewInstance[id].placeholderNode || $.DOM.Comment(id));
 					// console.log("removeChild", node, id, parentNode)
 					// $.DOM.removeChild(node, parentNode);
-					console.log(parentNode, placeholderNode, node)
+					// console.log(parentNode, placeholderNode, node)
 					$.DOM.replace(parentNode, placeholderNode, node)
 				})
 			}
@@ -644,13 +716,13 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 V.registerTrigger("", function(handle, index, parentHandle) {
 	var textHandle = handle.childNodes[0],
 		textHandleId = textHandle.id,
-		key = textHandle.node.textContent,
+		key = textHandle.node.data,
 		trigger;
 	if (parentHandle.type !== "handle") { //as textHandle
 		trigger = {
 			key: key,
 			event: function(NodeList_of_ViewInstance, database) { //call by ViewInstance's Node
-				NodeList_of_ViewInstance[textHandleId].currentNode.textContent = database[key];
+				NodeList_of_ViewInstance[textHandleId].currentNode.data = database[key];
 			}
 		}
 	} else { //as stringHandle
@@ -662,7 +734,7 @@ V.registerTrigger("", function(handle, index, parentHandle) {
 					NodeList_of_ViewInstance[this.handleId]._data = key.substring(1, key.length - 1);
 				}
 			};
-		} else {  //String for databese by key
+		} else { //String for databese by key
 			trigger = {
 				key: key,
 				bubble: true,

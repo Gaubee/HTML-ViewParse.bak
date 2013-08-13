@@ -8,7 +8,7 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	}
 	var self = this;
 	self.handleNodeTree = handleNodeTree;
-	self.DOMArr = [].slice.call(handleNodeTree.childNodes);
+	self.DOMArr = $.slice(handleNodeTree.childNodes);
 	self.NodeList = NodeList;
 	self._database = database || {};
 	self._triggers = {};
@@ -21,12 +21,28 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	});
 };
 function _bubbleTrigger(tiggerCollection,NodeList,database,eventTrigger){
+	var self = this;
 	$.forEach(tiggerCollection,function(trigger){
+		// if (trigger.chain) {
+		// 	console.log("key:",trigger.key,trigger,",chain!!")
+		// 	var chainTriggers = self._triggers[trigger.key],
+		// 		index = $.indexOf(chainTriggers,trigger);
+		// 	for(var i = 0;i<index;i+=1){
+				
+		// 	}
+		// }
 		trigger.event(NodeList,database,eventTrigger);
 		if (trigger.bubble) {
 			var parentNode = NodeList[trigger.handleId].parentNode;
-			parentNode&&_bubbleTrigger(parentNode._triggers,NodeList,database,trigger);
+			parentNode&&_bubbleTrigger.apply(self,[parentNode._triggers,NodeList,database,trigger]);
 		}
+		// if (trigger.chain) {
+		// 	$.forEach(chainTriggers,function(chain_trigger){
+		// 		console.log("chain:",chain_trigger)
+		// 		chain_trigger.event(NodeList,database,trigger);
+		// 	},index+1);
+		// 	console.log(index,chainTriggers);
+		// };
 	});
 };
 ViewInstance.prototype = {
@@ -41,8 +57,8 @@ ViewInstance.prototype = {
 		});
 		NodeList[handleNodeTree.id].currentNode = el;
 	},
-	_database: null,
-	_triggers: null,
+	// _database: null,
+	// _triggers: null,
 	get: function get(key) {},
 	set: function set(key, value) {
 		var self = this,
@@ -52,6 +68,6 @@ ViewInstance.prototype = {
 		if (oldValue != value) {
 			self._database[key] = value;
 		}
-		_bubbleTrigger(self._triggers[key],NodeList,database)
+		_bubbleTrigger.apply(self,[self._triggers[key],NodeList,database])
 	}
 };

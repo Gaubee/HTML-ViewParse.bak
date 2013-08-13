@@ -38,6 +38,18 @@ var $ = {
 	unshift: function(arr, item) {
 		arr.splice(0, 0, item);
 	},
+	slice: function(likeArr) {
+		var array;
+		try {
+			array = Array.prototype.slice.call(likeArr, 0); //non-IE and IE9+
+		} catch (ex) {
+			array = [];
+			for (var i = 0, len = likeArr.length; i < len; i++) {
+				array.push(likeArr[i]);
+			}
+		}
+		return array;
+	},
 	pushByID: function(arr, item) {
 		arr[item.id] = item;
 		return item;
@@ -102,27 +114,31 @@ var $ = {
 			callback(obj[i], i, obj);
 		}
 	},
+	reverseEach:function(arr,callback,i){
+		if (!arr) return;
+		return this._each($.slice(arr).reverse(), callback, arr.length-1-i)
+	},
 	forEach: function(arr, callback, i) {
 		if (!arr) return;
-		arr = [].slice.call(arr);
+		return this._each($.slice(arr), callback, i)
+	},
+	_each:function(arr,callback,i){
 		for (i = i || 0; i < arr.length; i += 1) {
 			if (callback(arr[i], i, arr) === false) break;
 		}
 	},
 	create: function(proto) {
-		var fn = function proto() {};
-		fn.prototype = proto;
-		return new fn;
+		_Object_create_noop.prototype = proto;
+		return new _Object_create_noop;
 	},
 	DOM: {
-		Comment:function(info){
+		Comment: function(info) {
 			return document.createComment(info)
 		},
 		insertBefore: function(parentNode, insertNode, beforNode) {
-			if (!parentNode) {
-				parentNode = beforNode.parentNode;
-			}
-			parentNode.insertBefore(insertNode, beforNode);
+			// try{
+			parentNode.insertBefore(insertNode, beforNode||null);
+			// }catch(e){}
 		},
 		append: function(parentNode, node) {
 			parentNode.appendChild(node);
@@ -136,14 +152,16 @@ var $ = {
 				parentNode.removeChild(node)
 			}
 		},
-		replace:function(parentNode,new_node,old_node){
-			try{
-			parentNode.replaceChild(new_node,old_node);
-			}catch(e){}
+		replace: function(parentNode, new_node, old_node) {
+			try {
+				parentNode.replaceChild(new_node, old_node);
+			} catch (e) {}
 		},
 		traversal: _traversal
 	}
 };
+var _Object_create_noop = function proto() {};
+
 var _traversal = function(node, callback) {
 	for (var i = 0, child_node, childNodes = node.childNodes; child_node = childNodes[i]; i += 1) {
 		var result = callback(child_node, i, node);

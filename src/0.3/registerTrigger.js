@@ -7,10 +7,11 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 		// comment_if_id = $.lastItem(handle.childNodes).id,
 		comment_else_id,
 		comment_endif_id,
-		conditionDOM = {
-			"true": [], //true is "if"
-			"false": [] //false is "else"
-		},
+		conditionDOM = handle._controllers,
+		// = {
+		// 	"true": [], //true is "if"
+		// 	"false": [] //false is "else"
+		// },
 		conditionStatus = true, //"if";
 		trigger,
 		deep = 0;
@@ -18,6 +19,8 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 		// if (child_handle.type !== "handle") {
 		if (!ignoreHandleType.test(child_handle.type)) {
 			// console.log(child_handle)
+			$.push(child_handle._controllers, id);
+			// $.push(child_handle._controllers[conditionStatus])
 			$.push(conditionDOM[conditionStatus], child_handle.id);
 		} else if (child_handle.handleName === "#if") {
 			deep += 1
@@ -34,15 +37,16 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 			}
 		}
 	}, index); // no (index + 1):scan itself:deep === 0 --> conditionStatus = !conditionStatus;
-	console.log(conditionDOM);
+	// console.log(conditionDOM);
 	trigger = {
 		// key:"",//default is ""
-		event: function(NodeList_of_ViewInstance) {
+		chain: true,
+		event: function(NodeList_of_ViewInstance, database, triggerBy) {
 			var conditionVal = NodeList_of_ViewInstance[conditionHandleId]._data,
 				parentNode = NodeList_of_ViewInstance[parentHandleId].currentNode,
 				markHandleId = comment_else_id, //if(true)
 				markHandle; //default is undefined --> insertBefore === appendChild
-			if (NodeList_of_ViewInstance[this.handleId]._data !== conditionVal) {
+			if (NodeList_of_ViewInstance[this.handleId]._data !== conditionVal || triggerBy) {
 				NodeList_of_ViewInstance[this.handleId]._data = conditionVal;
 				if (!conditionVal) {
 					markHandleId = comment_endif_id;
@@ -51,19 +55,26 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 					markHandle = NodeList_of_ViewInstance[markHandleId].currentNode;
 				}
 				$.forEach(conditionDOM[conditionVal], function(id) {
-					var node = NodeList_of_ViewInstance[id].currentNode;
-					var placeholderNode = (NodeList_of_ViewInstance[id].placeholderNode = NodeList_of_ViewInstance[id].placeholderNode||$.DOM.Comment(id));
-					// console.log("insertBefore", node, markHandle, id, markHandleId, parentNode);
-					// $.DOM.insertBefore(parentNode, node, markHandle)
-					console.log(parentNode, node, placeholderNode)
-					$.DOM.replace(parentNode, node, placeholderNode)
+					var currentHandle = NodeList_of_ViewInstance[id],
+						node = currentHandle.currentNode,
+						placeholderNode = (NodeList_of_ViewInstance[id].placeholderNode = NodeList_of_ViewInstance[id].placeholderNode || $.DOM.Comment(id)),
+						display = true;
+					// console.log(node,currentHandle._controllers)
+					$.forEach(currentHandle._controllers,function(controller_id){
+						var controllerHandle = NodeList_of_ViewInstance[controller_id]
+						//console.log(controllerHandle._data,controllerHandle._controllers,controllerHandle._controllers[controllerHandle._data])
+						display = display&&($.indexOf(controllerHandle._controllers[controllerHandle._data?true:false],currentHandle.id)!==-1);
+					});
+					if (display) {
+						$.DOM.replace(parentNode, node, placeholderNode)
+					}
 				});
 				$.forEach(conditionDOM[!conditionVal], function(id) {
 					var node = NodeList_of_ViewInstance[id].currentNode;
-					var placeholderNode = (NodeList_of_ViewInstance[id].placeholderNode = NodeList_of_ViewInstance[id].placeholderNode||$.DOM.Comment(id));
+					var placeholderNode = (NodeList_of_ViewInstance[id].placeholderNode = NodeList_of_ViewInstance[id].placeholderNode || $.DOM.Comment(id));
 					// console.log("removeChild", node, id, parentNode)
 					// $.DOM.removeChild(node, parentNode);
-					console.log(parentNode, placeholderNode, node)
+					// console.log(parentNode, placeholderNode, node)
 					$.DOM.replace(parentNode, placeholderNode, node)
 				})
 			}
@@ -85,13 +96,13 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 V.registerTrigger("", function(handle, index, parentHandle) {
 	var textHandle = handle.childNodes[0],
 		textHandleId = textHandle.id,
-		key = textHandle.node.textContent,
+		key = textHandle.node.data,
 		trigger;
 	if (parentHandle.type !== "handle") { //as textHandle
 		trigger = {
 			key: key,
 			event: function(NodeList_of_ViewInstance, database) { //call by ViewInstance's Node
-				NodeList_of_ViewInstance[textHandleId].currentNode.textContent = database[key];
+				NodeList_of_ViewInstance[textHandleId].currentNode.data = database[key];
 			}
 		}
 	} else { //as stringHandle
@@ -103,7 +114,7 @@ V.registerTrigger("", function(handle, index, parentHandle) {
 					NodeList_of_ViewInstance[this.handleId]._data = key.substring(1, key.length - 1);
 				}
 			};
-		} else {  //String for databese by key
+		} else { //String for databese by key
 			trigger = {
 				key: key,
 				bubble: true,
