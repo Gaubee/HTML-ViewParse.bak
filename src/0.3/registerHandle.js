@@ -42,7 +42,7 @@ var iforelseHandle = function(handle, index, parentHandle) {
 	$.insertAfter(parentHandle.childNodes, handle, commentHandle); //Node position calibration//no "$.insert" Avoid sequence error
 	return function(NodeList_of_ViewInstance) {
 		// nextHandle = parentHandle.childNodes[index + i];
-		nextHandle = nextHandle && nextHandle.newNode;
+		// nextHandle = nextHandle && nextHandle.newNode;
 		// console.log(this)
 		var nextNodeInstance = nextHandle && NodeList_of_ViewInstance[nextHandle.id].currentNode,
 			commentNodeInstance = NodeList_of_ViewInstance[commentHandle.id].currentNode,

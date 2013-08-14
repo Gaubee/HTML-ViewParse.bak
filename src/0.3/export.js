@@ -9,6 +9,7 @@ function parseRule(str) {
 		.replace(/\}[\s]*\}/g, "</span>");
 	return parseStr;
 };
+var _matchRule = /\{[\w\w]*?\{[\w\W]*?\}[\s]*\}/;
 /*
  * expores function
  */
@@ -69,5 +70,6 @@ var V = global.ViewParser = {
 	},
 	triggers: {},
 	handles: {},
-	modules: {}
+	modules: {},
+	attrModules:{}
 };

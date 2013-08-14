@@ -215,6 +215,7 @@ function _buildHandler(handleNodeTree) {
 		// console.log(item_node);
 	});
 };
+var _attrRegExp = /(\S+)=["']?((?:.(?!["']?\s+(?:\S+)=|[>"']))+.)["']?/g;
 
 function _buildTrigger(handleNodeTree) {
 	var self = this,
@@ -225,19 +226,54 @@ function _buildTrigger(handleNodeTree) {
 		if (handle.type === "handle") {
 			var triggerFactory = V.triggers[handle.handleName];
 			if (triggerFactory) {
-				var tigger = triggerFactory(handle, index, parentHandle);
+				var trigger = triggerFactory(handle, index, parentHandle);
 				// cos
-				if (tigger) {
-					var key = tigger.key = tigger.key || "";
+				if (trigger) {
+					var key = trigger.key = trigger.key || "";
 					// console.log
-					tigger.handleId = tigger.handleId || handle.id;
+					trigger.handleId = trigger.handleId || handle.id;
 					//unshift list and In order to achieve the trigger can be simulated bubble
-					$.unshift((triggers[key] = triggers[key] || []), tigger); //Storage as key -> array
-					$.push(handle._triggers, tigger); //Storage as array
+					$.unshift((triggers[key] = triggers[key] || []), trigger); //Storage as key -> array
+					$.push(handle._triggers, trigger); //Storage as array
 				}
 			}
 		} else if (handle.type === "element") {
-
+			var node = handle.node,
+				nodeHTMLStr = node.outerHTML.replace(node.innerHTML, ""),
+				attrs = nodeHTMLStr.match(_attrRegExp)
+				$.forEach(attrs, function(attrStr) {
+					var attrInfo = attrStr.split(_attrRegExp),
+						attrKey = attrInfo[1],
+						attrValue = attrInfo[2];
+					if (_matchRule.test(attrValue)) {
+						var attrBuilder = (V.attrModules[handle.id + attrKey] = V.parse(attrValue))(),
+							_shadowDIV = $.DOM.clone(shadowDIV);
+						// console.log(at = attrBuilder)
+						attrBuilder.append(_shadowDIV);
+						$.forIn(attrBuilder._triggers, function(triggerCollection, key) {
+							$.forEach(triggerCollection, function(trigger) {
+								var _newTrigger = $.create(trigger);
+								_newTrigger.event = function(NodeList, database, eventTrigger){
+									$.forIn(attrBuilder._triggers,function(attrTriggerCollection,attrTriggerKey){
+										$.forEach(attrTriggerCollection,function(attrTrigger){
+											attrTrigger.event(attrBuilder.NodeList, database, eventTrigger);
+										})
+									});
+									NodeList[handle.id].currentNode.setAttribute(attrKey, _shadowDIV.innerHTML)
+								};
+								// var _trigger = trigger.event,
+									// _newTrigger = function(NodeList, database, eventTrigger) {
+									// 	_trigger(attrBuilder.NodeList, database, eventTrigger);
+									// 	console.log(attrKey, _shadowDIV.innerHTML, NodeList[handle.id].currentNode)
+									// 	NodeList[handle.id].currentNode.setAttribute(attrKey, _shadowDIV.innerHTML)
+									// };
+								// trigger.event = _newTrigger;
+								$.unshift((triggers[key] = triggers[key] || []), _newTrigger); //Storage as key -> array
+								$.push(handle._triggers, _newTrigger); //Storage as array
+							})
+						});
+					}
+				});
 		}
 	});
 };
@@ -503,6 +539,7 @@ function parseRule(str) {
 		.replace(/\}[\s]*\}/g, "</span>");
 	return parseStr;
 };
+var _matchRule = /\{[\w\w]*?\{[\w\W]*?\}[\s]*\}/;
 /*
  * expores function
  */
@@ -563,7 +600,8 @@ var V = global.ViewParser = {
 	},
 	triggers: {},
 	handles: {},
-	modules: {}
+	modules: {},
+	attrModules:{}
 };
 V.registerHandle("", function(handle, index, parentHandle) {
 	var textHandle = handle.childNodes[0];
@@ -609,7 +647,7 @@ var iforelseHandle = function(handle, index, parentHandle) {
 	$.insertAfter(parentHandle.childNodes, handle, commentHandle); //Node position calibration//no "$.insert" Avoid sequence error
 	return function(NodeList_of_ViewInstance) {
 		// nextHandle = parentHandle.childNodes[index + i];
-		nextHandle = nextHandle && nextHandle.newNode;
+		// nextHandle = nextHandle && nextHandle.newNode;
 		// console.log(this)
 		var nextNodeInstance = nextHandle && NodeList_of_ViewInstance[nextHandle.id].currentNode,
 			commentNodeInstance = NodeList_of_ViewInstance[commentHandle.id].currentNode,

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>HTML-ViewParse</title>
+	<script type="text/javascript" src="../build/0.3/HTML-ViewParse.debug.js"></script>
+</head>
+<body>
+
+
+</body>
+	
+<script type="text/template" name="me">
+	I am a {#if{ {equa{ {{sex}}{{'woman'}} }} }}girl({{sex}}){#else{}}boy{/if{}}.
+	<hr />
+	<div>
+		<input id="xx" value="{{name}} is a {{sex}}"><br	/>
+		my name is {{name}}.
+	</div>
+	<br />
+	<br />
+	<br />
+</script>
+
+
+</html>
+
+<script type="text/javascript">
+	ViewParser.scans();
+
+	var n = ViewParser.modules["me"];
+	var b = n();
+	
+	b.append(document.body);
+	setTimeout(function (argument) {
+		b.set("sex","man");
+		b.set("name","Gaubee");
+	},100)
+	setTimeout(function (argument) {
+		b.set("sex","woman");
+		b.set("name","Lisa");
+	},4000);
+
+
+	var b2 = n();
+	
+	b2.append(document.body);
+	setTimeout(function (argument) {
+		b2.set("sex","man");
+		b2.set("name","Linda");
+	},2000)
+	setTimeout(function (argument) {
+		b2.set("sex","man");
+		b2.set("name","Micor");
+	},3000);
+</script>
