@@ -278,7 +278,8 @@ function _buildTrigger(handleNodeTree) {
 			$.forEach(attrs, function(attrStr) {
 				// console.log("attr item:", attrStr)
 				var attrInfo = attrStr.search("="),
-					attrKey = $.trim(attrStr.substring(0,attrInfo)).replace(V.prefix,"").toLowerCase(),
+					attrKey = $.trim(attrStr.substring(0,attrInfo)).toLowerCase(),
+					attrKey = attrKey.indexOf(V.prefix)?attrKey:attrKey.replace(V.prefix,""),
 					attrKey = (_isIE && IEfix[attrKey]) || attrKey,
 					attrValue = $.trim(attrStr.substring(attrInfo+1)),
 					attrValue = $.isString(attrValue)?attrValue.substring(1,attrValue.length-1):attrValue;
@@ -391,6 +392,13 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	self.DOMArr = $.slice(handleNodeTree.childNodes);
 	self.NodeList = NodeList;
 	self._database = database || {};
+	self._database.set = function(){
+		self.set.apply(self,$.slice(arguments))
+	};
+	self._database.get =  function(){
+		self.get.apply(self,$.slice(arguments))
+	};
+	self._packingBag;
 	self._triggers = {};
 	self.TEMP = {};
 	$.forIn(triggers,function(tiggerCollection,key){
@@ -435,11 +443,37 @@ ViewInstance.prototype = {
 				$.DOM.append(el,NodeList[node.id].currentNode);
 			}
 		});
+		this._packingBag = NodeList[handleNodeTree.id].currentNode
 		NodeList[handleNodeTree.id].currentNode = el;
+	},
+	insert:function(el){
+		var handleNodeTree = this.handleNodeTree,
+			NodeList = this.NodeList,
+			elParentNode = el.parentNode;
+		$.forEach(handleNodeTree.childNodes,function(node,index,parentNode){
+			// console.log(node,parentNode);
+			if (!node.ignore) {
+				$.DOM.insertBefore(elParentNode,NodeList[node.id].currentNode,el);
+			}
+		});
+		this._packingBag = this._packingBag||NodeList[handleNodeTree.id].currentNode
+		// console.log("_packingBag:",handleNodeTree.id,this._packingBag)
+		NodeList[handleNodeTree.id].currentNode = elParentNode;
+	},
+	remove:function(){
+		// console.log(this._packingBag)
+		if (this._packingBag) {
+			this.append(this._packingBag)
+			this._packingBag = undefined;
+		}
 	},
 	// _database: null,
 	// _triggers: null,
-	get: function get(key) {},
+	get: function get(key) {
+		var self = this,
+			database = self._database
+		return database[key]
+	},
 	set: function set(key, value) {
 		var self = this,
 			database = self._database,
@@ -499,7 +533,7 @@ function Handle(type, opction) {
 };
 Handle.prototype = {
 	ignore: false, //ignore DOM
-	display: true, //show or hidden DOM
+	display: false, //function of show or hidden DOM
 	parentNode: null,
 	childNodes: [], //rewrite
 	triggers: [], //rewrite
@@ -525,7 +559,6 @@ function TemplateHandle(handleName, node) {
 };
 TemplateHandle.prototype = Handle("handle", {
 	ignore: true,
-	display: false,
 	nodeType: 1
 });
 
@@ -579,8 +612,7 @@ function CommentHandle(node) {
 	this.id = $.uid();
 };
 CommentHandle.prototype = Handle("comment", {
-	nodeType: 8,
-	display: false
+	nodeType: 8
 })
 /*
  * parse function
@@ -659,7 +691,8 @@ var V = global.ViewParser = {
 	triggers: {},
 	handles: {},
 	modules: {},
-	attrModules:{}
+	attrModules:{},
+	eachModules:{}
 };
 V.registerHandle("", function(handle, index, parentHandle) {
 	var textHandle = handle.childNodes[0];
@@ -691,31 +724,82 @@ V.registerHandle("", function(handle, index, parentHandle) {
 	}
 	// console.log(textHandle,parentHandle.type);
 });
-var iforelseHandle = function(handle, index, parentHandle) {
-	var handleName = handle.handleName;
-	var commentNode = $.DOM.Comment(handleName);
-	var commentHandle = CommentHandle(commentNode) // commentHandle as Placeholder
+var _commentPlaceholder = function(handle,parentHandle){
+	var handleName = handle.handleName,
+		commentNode = $.DOM.Comment(handleName+handle.id),
+		commentHandle = CommentHandle(commentNode) // commentHandle as Placeholder
 	$.push(handle.childNodes, commentHandle);
-	var i = 0;
-	do {
-		i += 1;
-		var nextHandle = parentHandle.childNodes[index + i];
-	} while (nextHandle && nextHandle.ignore);
-	
 	$.insertAfter(parentHandle.childNodes, handle, commentHandle); //Node position calibration//no "$.insert" Avoid sequence error
-	return function(NodeList_of_ViewInstance) {
-		// nextHandle = parentHandle.childNodes[index + i];
-		// nextHandle = nextHandle && nextHandle.newNode;
-		// console.log(this)
-		var nextNodeInstance = nextHandle && NodeList_of_ViewInstance[nextHandle.id].currentNode,
-			commentNodeInstance = NodeList_of_ViewInstance[commentHandle.id].currentNode,
-			parentNodeInstance = NodeList_of_ViewInstance[parentHandle.id].currentNode
-			$.DOM.insertBefore(parentNodeInstance, commentNodeInstance, nextNodeInstance); //Manually insert node
+	return commentHandle;
+};
+var placeholderHandle = function(handle, index, parentHandle) {
+	// var i = 0;
+	// do {
+	// 	i += 1;
+	// 	var nextHandle = parentHandle.childNodes[index + i];
+	// } while (nextHandle && nextHandle.ignore);
+
+	var commentHandle = _commentPlaceholder(handle,parentHandle);//before return
+
+	// return function(NodeList_of_ViewInstance) {
+	// 	var nextNodeInstance = nextHandle && NodeList_of_ViewInstance[nextHandle.id].currentNode,
+	// 		commentNodeInstance = NodeList_of_ViewInstance[commentHandle.id].currentNode,
+	// 		parentNodeInstance = NodeList_of_ViewInstance[parentHandle.id].currentNode
+	// 		$.DOM.insertBefore(parentNodeInstance, commentNodeInstance, nextNodeInstance); //Manually insert node
+	// }
+};
+V.registerHandle("#if", placeholderHandle);
+V.registerHandle("#else", placeholderHandle);
+V.registerHandle("/if", placeholderHandle);
+var _each_display = function(show_or_hidden,NodeList_of_ViewInstance){
+	// console.log(show_or_hidden,"each");
+	var handle = this,
+		parentHandle = handle.parentNode,
+		comment_endeach_id,
+		arrViewInstances = handle.arrViewInstances;
+	$.forEach(parentHandle.childNodes,function(child_handle,index,cs){//get comment_endeach_id
+		if(child_handle.id === handle.id){
+			comment_endeach_id = cs[index+ 3].id;
+			return false;
+		}
+	});
+	if (show_or_hidden) {
+		$.forEach(arrViewInstances,function(viewInstance){
+			// console.log(comment_endeach_id,NodeList_of_ViewInstance[comment_endeach_id],handle,parentHandle)
+			viewInstance.insert(NodeList_of_ViewInstance[comment_endeach_id].currentNode)	
+		})
+	}else{
+		$.forEach(arrViewInstances,function(viewInstance){
+			// console.log(viewInstance)
+			viewInstance.remove();
+		})
 	}
-}
-V.registerHandle("#if", iforelseHandle);
-V.registerHandle("#else", iforelseHandle);
-V.registerHandle("/if", iforelseHandle);
+};
+V.registerHandle("#each",function(handle, index, parentHandle){
+	
+	var _shadowBody = $.DOM.clone(shadowBody),
+		eachModuleHandle = ElementHandle(_shadowBody),
+		endIndex = 0;
+
+	handle.arrViewInstances = [];
+	handle.len = 0;
+		// console.log()
+	$.forEach(parentHandle.childNodes,function(childHandle,index){
+		endIndex = index;
+		if (childHandle.handleName === "/each") {
+			return false
+		}
+		$.push(eachModuleHandle.childNodes,childHandle);
+	},index+1);
+// console.log(index+1,endIndex-index-1,parentHandle.childNodes)
+	parentHandle.childNodes.splice(index+1,endIndex-index-1);
+// console.log(parentHandle.childNodes)
+	V.eachModules[handle.id] = View(eachModuleHandle);
+
+	handle.display = _each_display;
+	_commentPlaceholder(handle,parentHandle);//before return
+});
+V.registerHandle("/each",placeholderHandle);
 V.registerTrigger("#if", function(handle, index, parentHandle) {
 	// console.log(handle)
 	var id = handle.id,
@@ -733,14 +817,16 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 		conditionStatus = true, //"if";
 		trigger,
 		deep = 0;
+	// console.log(parentHandle, index)
 	$.forEach(parentHandle.childNodes, function(child_handle, i, childHandles) {
 		// if (child_handle.type !== "handle") {
-		if (!ignoreHandleType.test(child_handle.type)) {
+		/*if (!ignoreHandleType.test(child_handle.type)) {
 			// console.log(child_handle)
 			$.push(child_handle._controllers, id);
 			// $.push(child_handle._controllers[conditionStatus])
 			$.push(conditionDOM[conditionStatus], child_handle.id);
-		} else if (child_handle.handleName === "#if") {
+		} else */
+		if (child_handle.handleName === "#if") {
 			deep += 1
 		} else if (child_handle.handleName === "#else") {
 			if (deep === 1) {
@@ -753,12 +839,17 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 				comment_endif_id = $.lastItem(child_handle.childNodes).id;
 				return false;
 			}
+		} else if (child_handle.type !== "comment") {
+			// console.log(child_handle)
+			$.push(child_handle._controllers, id);
+			// $.push(child_handle._controllers[conditionStatus])
+			$.push(conditionDOM[conditionStatus], child_handle.id);
 		}
 	}, index); // no (index + 1):scan itself:deep === 0 --> conditionStatus = !conditionStatus;
 	// console.log(conditionDOM);
 	trigger = {
 		// key:"",//default is ""
-		chain: true,
+		// chain: true,
 		event: function(NodeList_of_ViewInstance, database, triggerBy) {
 			var conditionVal = NodeList_of_ViewInstance[conditionHandleId]._data,
 				parentNode = NodeList_of_ViewInstance[parentHandleId].currentNode,
@@ -778,22 +869,33 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 						placeholderNode = (NodeList_of_ViewInstance[id].placeholderNode = NodeList_of_ViewInstance[id].placeholderNode || $.DOM.Comment(id)),
 						display = true;
 					// console.log(node,currentHandle._controllers)
-					$.forEach(currentHandle._controllers,function(controller_id){
+					$.forEach(currentHandle._controllers, function(controller_id) {
 						var controllerHandle = NodeList_of_ViewInstance[controller_id]
 						//console.log(controllerHandle._data,controllerHandle._controllers,controllerHandle._controllers[controllerHandle._data])
-						display = display&&($.indexOf(controllerHandle._controllers[controllerHandle._data?true:false],currentHandle.id)!==-1);
+						// console.log(currentHandle.id)
+						display = display && ($.indexOf(controllerHandle._controllers[controllerHandle._data ? true : false], currentHandle.id) !== -1);
 					});
 					if (display) {
-						$.DOM.replace(parentNode, node, placeholderNode)
+						if (currentHandle.display) { //Custom Display Function,default is false
+							currentHandle.display(true,NodeList_of_ViewInstance, database, triggerBy)
+						} else {
+							// console.log("show", currentHandle)
+							$.DOM.replace(parentNode, node, placeholderNode)
+						}
 					}
 				});
 				$.forEach(conditionDOM[!conditionVal], function(id) {
-					var node = NodeList_of_ViewInstance[id].currentNode;
-					var placeholderNode = (NodeList_of_ViewInstance[id].placeholderNode = NodeList_of_ViewInstance[id].placeholderNode || $.DOM.Comment(id));
+					var currentHandle = NodeList_of_ViewInstance[id],
+						node = currentHandle.currentNode,
+						placeholderNode = (currentHandle.placeholderNode = currentHandle.placeholderNode || $.DOM.Comment(id));
 					// console.log("removeChild", node, id, parentNode)
 					// $.DOM.removeChild(node, parentNode);
 					// console.log(parentNode, placeholderNode, node)
-					$.DOM.replace(parentNode, placeholderNode, node)
+					if (currentHandle.display) { //Custom Display Function,default is false
+						currentHandle.display(false,NodeList_of_ViewInstance, database, triggerBy)
+					} else {
+						$.DOM.replace(parentNode, placeholderNode, node)
+					}
 				})
 			}
 		}
@@ -810,6 +912,53 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 	// 	}
 	// }
 	return trigger;
+});
+V.registerTrigger("#each", function(handle, index, parentHandle) {
+	var id = handle.id,
+		arrDataHandleKey = handle.childNodes[0].childNodes[0].node.data,
+		comment_endeach_id = parentHandle.childNodes[index + 3].id, //eachHandle --> eachComment --> endeachHandle --> endeachComment
+		arrViewInstances = handle.arrViewInstances,
+		trigger;
+	// console.log(handle)
+	trigger = {
+		event: function(NodeList_of_ViewInstance, database) {
+			var data = database[arrDataHandleKey];
+			var divideIndex = 0;
+			var inserNew;
+			if (true) {};
+			$.forEach(data, function(eachItemData, index) {
+				// console.log(arrViewInstances[index])
+				if (!arrViewInstances[index]) {
+					arrViewInstances[index] = V.eachModules[id]();
+					inserNew = true;
+				}
+				var viewInstance = arrViewInstances[index];
+				if (viewInstance._packingBag) {//be remove into packingBag
+					inserNew = true;
+				}
+				$.forIn(eachItemData, function(dataVal, dataKey) {
+					viewInstance.set(dataKey, dataVal);
+				});
+				if (inserNew) {
+					viewInstance.insert(NodeList_of_ViewInstance[comment_endeach_id].currentNode)
+					// console.log(NodeList_of_ViewInstance[id]._controllers)
+				}
+				divideIndex = index;
+			});
+			// console.log(divideIndex)
+			divideIndex+=1;
+			$.forEach(arrViewInstances, function(eachItemHandle) {
+				eachItemHandle.remove();
+			}, divideIndex);
+			var lengthKey = arrDataHandleKey + ".length";
+			// console.log(lengthKey);
+			if (database.get(lengthKey) !== divideIndex) {
+				database.set(lengthKey, divideIndex)
+				handle.len = divideIndex
+			}
+		}
+	}
+	return trigger
 });
 V.registerTrigger("", function(handle, index, parentHandle) {
 	var textHandle = handle.childNodes[0],

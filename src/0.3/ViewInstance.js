@@ -11,6 +11,13 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	self.DOMArr = $.slice(handleNodeTree.childNodes);
 	self.NodeList = NodeList;
 	self._database = database || {};
+	self._database.set = function(){
+		self.set.apply(self,$.slice(arguments))
+	};
+	self._database.get =  function(){
+		self.get.apply(self,$.slice(arguments))
+	};
+	self._packingBag;
 	self._triggers = {};
 	self.TEMP = {};
 	$.forIn(triggers,function(tiggerCollection,key){
@@ -55,11 +62,37 @@ ViewInstance.prototype = {
 				$.DOM.append(el,NodeList[node.id].currentNode);
 			}
 		});
+		this._packingBag = NodeList[handleNodeTree.id].currentNode
 		NodeList[handleNodeTree.id].currentNode = el;
+	},
+	insert:function(el){
+		var handleNodeTree = this.handleNodeTree,
+			NodeList = this.NodeList,
+			elParentNode = el.parentNode;
+		$.forEach(handleNodeTree.childNodes,function(node,index,parentNode){
+			// console.log(node,parentNode);
+			if (!node.ignore) {
+				$.DOM.insertBefore(elParentNode,NodeList[node.id].currentNode,el);
+			}
+		});
+		this._packingBag = this._packingBag||NodeList[handleNodeTree.id].currentNode
+		// console.log("_packingBag:",handleNodeTree.id,this._packingBag)
+		NodeList[handleNodeTree.id].currentNode = elParentNode;
+	},
+	remove:function(){
+		// console.log(this._packingBag)
+		if (this._packingBag) {
+			this.append(this._packingBag)
+			this._packingBag = undefined;
+		}
 	},
 	// _database: null,
 	// _triggers: null,
-	get: function get(key) {},
+	get: function get(key) {
+		var self = this,
+			database = self._database
+		return database[key]
+	},
 	set: function set(key, value) {
 		var self = this,
 			database = self._database,

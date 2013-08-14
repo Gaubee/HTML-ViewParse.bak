@@ -72,5 +72,6 @@ var V = global.ViewParser = {
 	triggers: {},
 	handles: {},
 	modules: {},
-	attrModules:{}
+	attrModules:{},
+	eachModules:{}
 };

@@ -102,7 +102,8 @@ function _buildTrigger(handleNodeTree) {
 			$.forEach(attrs, function(attrStr) {
 				// console.log("attr item:", attrStr)
 				var attrInfo = attrStr.search("="),
-					attrKey = $.trim(attrStr.substring(0,attrInfo)).replace(V.prefix,"").toLowerCase(),
+					attrKey = $.trim(attrStr.substring(0,attrInfo)).toLowerCase(),
+					attrKey = attrKey.indexOf(V.prefix)?attrKey:attrKey.replace(V.prefix,""),
 					attrKey = (_isIE && IEfix[attrKey]) || attrKey,
 					attrValue = $.trim(attrStr.substring(attrInfo+1)),
 					attrValue = $.isString(attrValue)?attrValue.substring(1,attrValue.length-1):attrValue;

@@ -46,7 +46,7 @@ function Handle(type, opction) {
 };
 Handle.prototype = {
 	ignore: false, //ignore DOM
-	display: true, //show or hidden DOM
+	display: false, //function of show or hidden DOM
 	parentNode: null,
 	childNodes: [], //rewrite
 	triggers: [], //rewrite
@@ -72,7 +72,6 @@ function TemplateHandle(handleName, node) {
 };
 TemplateHandle.prototype = Handle("handle", {
 	ignore: true,
-	display: false,
 	nodeType: 1
 });
 
@@ -126,8 +125,7 @@ function CommentHandle(node) {
 	this.id = $.uid();
 };
 CommentHandle.prototype = Handle("comment", {
-	nodeType: 8,
-	display: false
+	nodeType: 8
 })
 /*
  * parse function
