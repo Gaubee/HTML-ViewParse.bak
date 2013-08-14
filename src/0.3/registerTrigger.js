@@ -106,7 +106,7 @@ V.registerTrigger("", function(handle, index, parentHandle) {
 			}
 		}
 	} else { //as stringHandle
-		if ((key[0] === key[key.length - 1]) && "\'\"".indexOf(key[0]) !== -1) { // single String
+		if ($.isString(key)) { // single String
 			trigger = { //const 
 				key: ".", //const trigger
 				bubble: true,

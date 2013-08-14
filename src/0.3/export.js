@@ -15,6 +15,7 @@ var _matchRule = /\{[\w\w]*?\{[\w\W]*?\}[\s]*\}/;
  */
 
 var V = global.ViewParser = {
+	prefix:"attr-",
 	parse: function(htmlStr) {
 		var _shadowBody = $.DOM.clone(shadowBody);
 		_shadowBody.innerHTML = htmlStr;

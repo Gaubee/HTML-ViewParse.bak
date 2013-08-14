@@ -10,6 +10,10 @@ var $ = {
 	uid: function() {
 		return this.id = this.id + 1;
 	},
+	isString:function(str){
+		var start = str[0];
+		return (start === str[str.length - 1]) && "\'\"".indexOf(start) !== -1
+	},
 	// trim: function(str) {
 	// 	whitespace = ' \n\r\t\f\x0b\xa0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u2028\u2029\u3000';
 	// 	for (var i = 0, len = str.length; i < len; i++) {
@@ -216,6 +220,35 @@ function _buildHandler(handleNodeTree) {
 	});
 };
 var _attrRegExp = /(\S+)=["']?((?:.(?!["']?\s+(?:\S+)=|[>"']))+.)["']?/g;
+var _isIE = !+"\v1";
+//by RubyLouvre(司徒正美)
+//setAttribute bug:http://www.iefans.net/ie-setattribute-bug/
+var IEfix = {
+	acceptcharset: "acceptCharset",
+	accesskey: "accessKey",
+	allowtransparency: "allowTransparency",
+	bgcolor: "bgColor",
+	cellpadding: "cellPadding",
+	cellspacing: "cellSpacing",
+	"class": "className",
+	colspan: "colSpan",
+	checked: "defaultChecked",
+	selected: "defaultSelected",
+	"for": "htmlFor",
+	frameborder: "frameBorder",
+	hspace: "hSpace",
+	longdesc: "longDesc",
+	maxlength: "maxLength",
+	marginwidth: "marginWidth",
+	marginheight: "marginHeight",
+	noresize: "noResize",
+	noshade: "noShade",
+	readonly: "readOnly",
+	rowspan: "rowSpan",
+	tabindex: "tabIndex",
+	valign: "vAlign",
+	vspace: "vSpace"
+};
 
 function _buildTrigger(handleNodeTree) {
 	var self = this,
@@ -242,41 +275,53 @@ function _buildTrigger(handleNodeTree) {
 				nodeHTMLStr = node.outerHTML.replace(node.innerHTML, ""),
 				attrs = nodeHTMLStr.match(_attrRegExp);
 
-				console.log("element attrs:",attrs)
-				$.forEach(attrs, function(attrStr) {
-					console.log("attr item:",attrStr)
-					var attrKey = $.trim(attrStr.split("=")[0]),
-						attrValue = node.getAttribute(attrKey);
-					console.log("attr ",attrKey," is template!(",attrValue,")");
-					if (_matchRule.test(attrValue)) {
-						var attrViewInstance = (V.attrModules[handle.id + attrKey] = V.parse(attrValue))(),
-							_shadowDIV = $.DOM.clone(shadowDIV);
-						// console.log(at = attrViewInstance)
-						attrViewInstance.append(_shadowDIV);
-						$.forIn(attrViewInstance._triggers, function(triggerCollection, key) {
-							$.forEach(triggerCollection, function(trigger) {
-								var _newTrigger = $.create(trigger);
-								_newTrigger.event = function(NodeList, database, eventTrigger){
-									$.forIn(attrViewInstance._triggers,function(attrTriggerCollection,attrTriggerKey){
-										$.forEach(attrTriggerCollection,function(attrTrigger){
-											attrTrigger.event(attrViewInstance.NodeList, database, eventTrigger);
-										})
-									});
-									NodeList[handle.id].currentNode.setAttribute(attrKey, _shadowDIV.innerHTML)
-								};
-								// var _trigger = trigger.event,
-									// _newTrigger = function(NodeList, database, eventTrigger) {
-									// 	_trigger(attrViewInstance.NodeList, database, eventTrigger);
-									// 	console.log(attrKey, _shadowDIV.innerHTML, NodeList[handle.id].currentNode)
-									// 	NodeList[handle.id].currentNode.setAttribute(attrKey, _shadowDIV.innerHTML)
-									// };
-								// trigger.event = _newTrigger;
-								$.unshift((triggers[key] = triggers[key] || []), _newTrigger); //Storage as key -> array
-								$.push(handle._triggers, _newTrigger); //Storage as array
-							})
-						});
-					}
-				});
+			console.log("element attrs:", attrs)
+			$.forEach(attrs, function(attrStr) {
+				console.log("attr item:", attrStr)
+				var attrInfo = attrStr.search("="),
+					attrKey = $.trim(attrStr.substring(0,attrInfo)).replace(V.prefix,""),
+					attrKey = (_isIE && IEfix[attrKey]) || attrKey,
+					attrValue = $.trim(attrStr.substring(attrInfo+1)),
+					attrValue = $.isString(attrValue)?attrValue.substring(1,attrValue.length-1):attrValue;
+				// console.log("attr ", attrKey, " is template!(", attrValue, ")");
+				if (_matchRule.test(attrValue)) {
+					var attrViewInstance = (V.attrModules[handle.id + attrKey] = V.parse(attrValue))(),
+						_shadowDIV = $.DOM.clone(shadowDIV);
+					// console.log(at = attrViewInstance)
+					attrViewInstance.append(_shadowDIV);
+					$.forIn(attrViewInstance._triggers, function(triggerCollection, key) {
+						$.forEach(triggerCollection, function(trigger) {
+							var _newTrigger = $.create(trigger);
+							_newTrigger.event = function(NodeList, database, eventTrigger) {
+								$.forIn(attrViewInstance._triggers, function(attrTriggerCollection, attrTriggerKey) {
+									$.forEach(attrTriggerCollection, function(attrTrigger) {
+										attrTrigger.event(attrViewInstance.NodeList, database, eventTrigger);
+									})
+								});
+								var currentNode = NodeList[handle.id].currentNode,
+									attrValue = _shadowDIV.innerHTML;
+
+								// console.log("set attr:", attrKey, ":", attrValue)
+
+
+								currentNode.setAttribute(attrKey, attrValue);
+								if (attrKey === "style" && _isIE) {
+									currentNode.style.setAttribute('cssText', attrValue);
+								}
+							};
+							// var _trigger = trigger.event,
+							// _newTrigger = function(NodeList, database, eventTrigger) {
+							// 	_trigger(attrViewInstance.NodeList, database, eventTrigger);
+							// 	console.log(attrKey, _shadowDIV.innerHTML, NodeList[handle.id].currentNode)
+							// 	NodeList[handle.id].currentNode.setAttribute(attrKey, _shadowDIV.innerHTML)
+							// };
+							// trigger.event = _newTrigger;
+							$.unshift((triggers[key] = triggers[key] || []), _newTrigger); //Storage as key -> array
+							$.push(handle._triggers, _newTrigger); //Storage as array
+						})
+					});
+				}
+			});
 		}
 	});
 };
@@ -548,6 +593,7 @@ var _matchRule = /\{[\w\w]*?\{[\w\W]*?\}[\s]*\}/;
  */
 
 var V = global.ViewParser = {
+	prefix:"attr-",
 	parse: function(htmlStr) {
 		var _shadowBody = $.DOM.clone(shadowBody);
 		_shadowBody.innerHTML = htmlStr;
@@ -769,7 +815,7 @@ V.registerTrigger("", function(handle, index, parentHandle) {
 			}
 		}
 	} else { //as stringHandle
-		if ((key[0] === key[key.length - 1]) && "\'\"".indexOf(key[0]) !== -1) { // single String
+		if ($.isString(key)) { // single String
 			trigger = { //const 
 				key: ".", //const trigger
 				bubble: true,
