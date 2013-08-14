@@ -9,8 +9,8 @@ var $ = {
 		return this.id = this.id + 1;
 	},
 	isString:function(str){
-		var start = str[0];
-		return (start === str[str.length - 1]) && "\'\"".indexOf(start) !== -1
+		var start = str.charAt(0);
+		return (start === str.charAt(str.length - 1)) && "\'\"".indexOf(start) !== -1
 	},
 	// trim: function(str) {
 	// 	whitespace = ' \n\r\t\f\x0b\xa0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u2028\u2029\u3000';
@@ -219,6 +219,7 @@ function _buildHandler(handleNodeTree) {
 };
 var _attrRegExp = /(\S+)=["']?((?:.(?!["']?\s+(?:\S+)=|[>"']))+.)["']?/g;
 var _isIE = !+"\v1";
+var _event_by_fun = true;
 //by RubyLouvre(司徒正美)
 //setAttribute bug:http://www.iefans.net/ie-setattribute-bug/
 var IEfix = {
@@ -273,11 +274,11 @@ function _buildTrigger(handleNodeTree) {
 				nodeHTMLStr = node.outerHTML.replace(node.innerHTML, ""),
 				attrs = nodeHTMLStr.match(_attrRegExp);
 
-			console.log("element attrs:", attrs)
+			// console.log("element attrs:", attrs)
 			$.forEach(attrs, function(attrStr) {
-				console.log("attr item:", attrStr)
+				// console.log("attr item:", attrStr)
 				var attrInfo = attrStr.search("="),
-					attrKey = $.trim(attrStr.substring(0,attrInfo)).replace(V.prefix,""),
+					attrKey = $.trim(attrStr.substring(0,attrInfo)).replace(V.prefix,"").toLowerCase(),
 					attrKey = (_isIE && IEfix[attrKey]) || attrKey,
 					attrValue = $.trim(attrStr.substring(attrInfo+1)),
 					attrValue = $.isString(attrValue)?attrValue.substring(1,attrValue.length-1):attrValue;
@@ -302,9 +303,19 @@ function _buildTrigger(handleNodeTree) {
 								// console.log("set attr:", attrKey, ":", attrValue)
 
 
-								currentNode.setAttribute(attrKey, attrValue);
 								if (attrKey === "style" && _isIE) {
 									currentNode.style.setAttribute('cssText', attrValue);
+								}else if(attrKey.indexOf("on")===0&& _event_by_fun){
+									// console.log("event:",attrValue)
+									currentNode.setAttribute(attrKey, Function(attrValue));
+									// currentNode[attrKey] = attrValue;
+									// currentNode.setAttribute(attrKey, attrValue);
+									if(typeof currentNode.getAttribute(attrKey)==="string"){
+										_event_by_fun = false;
+										currentNode.setAttribute(attrKey, attrValue);
+									}
+								}else{
+									currentNode.setAttribute(attrKey, attrValue);
 								}
 							};
 							// var _trigger = trigger.event,

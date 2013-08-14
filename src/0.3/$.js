@@ -9,8 +9,8 @@ var $ = {
 		return this.id = this.id + 1;
 	},
 	isString:function(str){
-		var start = str[0];
-		return (start === str[str.length - 1]) && "\'\"".indexOf(start) !== -1
+		var start = str.charAt(0);
+		return (start === str.charAt(str.length - 1)) && "\'\"".indexOf(start) !== -1
 	},
 	// trim: function(str) {
 	// 	whitespace = ' \n\r\t\f\x0b\xa0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u2028\u2029\u3000';
