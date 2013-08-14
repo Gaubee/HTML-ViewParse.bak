@@ -679,7 +679,7 @@ var V = global.ViewParser = {
 			var node = item.baseNode,
 				parentNode = item.parentNode
 				insertNodesHTML = item.insertNodesHTML;
-				shadowDIV.innerHTML = parseRule(insertNodesHTML);
+				shadowDIV.innerHTML = insertNodesHTML;
 			//Using innerHTML rendering is complete immediate operation DOM, 
 			//innerHTML otherwise covered again, the node if it is not, 
 			//then memory leaks, IE can not get to the full node.
