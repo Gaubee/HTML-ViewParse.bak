@@ -20,11 +20,12 @@
 </body>
 	
 <script type="text/template" name="me">
-	I am a {#if{ {equa{ {{sex}}{{'woman'}} }} }}girl({{sex}}){#else{}}boy{/if{}}.
+
+	I am a {#if( {equa( {(sex)}{('woman')} )} )}girl({(sex)}){#else()}boy{/if()}.
 	<hr />
 	<div>
-		<input id="xx" value="{{name}} is a {{sex}}" class="{{sex}}" attr-style="{{style}}" onClick="{{clickEvent}}"><br	/>
-		my name is {{name}}.
+		<input value="{(name)} is a {(sex)}" class="{(sex)}" attr-style="{(style)}" onClick="{(clickEvent)}"><br />
+		my name is {(name)}.
 	</div>
 	<br />
 	<br />

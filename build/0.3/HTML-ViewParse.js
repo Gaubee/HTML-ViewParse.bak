@@ -623,14 +623,32 @@ CommentHandle.prototype = Handle("comment", {
 /*
  * parse rule
  */
- 
+var _placeholder = function(){
+	return "@"+Math.random().toString(36).substring(2)
+}
+var placeholder = {
+	"{":_placeholder(),
+	"(":_placeholder(),
+	")":_placeholder(),
+	"}":_placeholder()
+}
+var _r = RegExp();
+
 function parseRule(str) {
 	var parseStr = str
-		.replace(/\{([\w\W]*?)[\{\}]/g, "<span type='handle' handle='$1'>")
-		.replace(/\}[\s]*\}/g, "</span>");
+		.replace(/\\\{/g,placeholder["{"])
+		.replace(/\\\(/g,placeholder["("])
+		.replace(/\\\)/g,placeholder[")"])
+		.replace(/\\\}/g,placeholder["}"])
+		.replace(/\{([\w\W]*?)\(/g, "<span type='handle' handle='$1'>")
+		.replace(/\)[\s]*\}/g, "</span>")
+		.replace([_r.compile("/"+placeholder["{"]+"/g"),_r][1],"{")
+		.replace([_r.compile("/"+placeholder["("]+"/g"),_r][1],"(")
+		.replace([_r.compile("/"+placeholder[")"]+"/g"),_r][1],")")
+		.replace([_r.compile("/"+placeholder["}"]+"/g"),_r][1],"}");
 	return parseStr;
 };
-var _matchRule = /\{[\w\w]*?\{[\w\W]*?\}[\s]*\}/;
+var _matchRule = /\{[\w\w]*?\([\w\W]*?\)[\s]*\}/;
 /*
  * expores function
  */

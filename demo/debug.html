@@ -10,27 +10,27 @@
 </body>
 	
 <script type="text/template" name="me">
-	I am a {#if{ {equa{ {{sex}}{{'woman'}} }} }}girl({{sex}}){#else{}}boy{/if{}}.
+	I am a {#if( {equa( {(sex)}{('woman')} )} )}girl({(sex)}){#else()}boy{/if()}.
 	<hr />
 	<div>
 		<input value="{{name}}"><br	/>
-		my name is {{name}}.
+		my name is {(name)}.
 	</div>
 </script>
 
 <script type="text/template" name="if!">
 	<hr/>
 	<h2>haha!</h2>
-	{#if{ {{love}} }}
+	{#if( {(love)} )}
 		you are my love!
-	{#else{}}
+	{#else()}
 		I am what I am...
-		{#if{ {{too_young_too_simple}} }}
+		{#if( {(too_young_too_simple)} )}
 			But I am eager to love.
-		{#else{}}
+		{#else()}
 			No Country For Old Men.
-		{/if{}}
-	{/if{}}
+		{/if()}
+	{/if()}
 	<hr/>
 </script>
 

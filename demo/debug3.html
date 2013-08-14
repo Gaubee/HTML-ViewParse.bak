@@ -19,25 +19,25 @@
 </body>
 
 <script type="text/template" name="people">
-	<h1>Here Comes Some People</h1>{{people.length}}
+	<h1>Here Comes Some People</h1>{(people.length)}
 	<hr />
 	<ul>
-	{#if{ {{showPeople}} }}
-		{#each{ {{people}} }}
+	{#if( {(showPeople)} )}
+		{#each( {(people)} )}
 		<li>
-			{{name}}
-			{#if{ {equa{{{name}}{{"Gaubee"}}}} }}
+			{(name)}
+			{#if( {equa({(name)}{("Gaubee")})} )}
 				 is author
-			{/if{}}
+			{/if()}
 		</li>
-		{/each{}}
-	{#else{}}
-		{#each{ {{age}} }}
+		{/each()}
+	{#else()}
+		{#each( {(age)} )}
 		<li>
-			{{name}} is {{age}} year old!
+			{(name)} is {(age)} year old!
 		</li>
-		{/each{}}
-	{/if{}}
+		{/each()}
+	{/if()}
 
 	</ul>
 
