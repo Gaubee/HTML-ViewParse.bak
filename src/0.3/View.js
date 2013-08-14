@@ -66,30 +66,33 @@ function _buildTrigger(handleNodeTree) {
 		} else if (handle.type === "element") {
 			var node = handle.node,
 				nodeHTMLStr = node.outerHTML.replace(node.innerHTML, ""),
-				attrs = nodeHTMLStr.match(_attrRegExp)
+				attrs = nodeHTMLStr.match(_attrRegExp);
+
+				console.log("element attrs:",attrs)
 				$.forEach(attrs, function(attrStr) {
-					var attrInfo = attrStr.split(_attrRegExp),
-						attrKey = attrInfo[1],
-						attrValue = attrInfo[2];
+					console.log("attr item:",attrStr)
+					var attrKey = $.trim(attrStr.split("=")[0]),
+						attrValue = node.getAttribute(attrKey);
+					console.log("attr ",attrKey," is template!(",attrValue,")");
 					if (_matchRule.test(attrValue)) {
-						var attrBuilder = (V.attrModules[handle.id + attrKey] = V.parse(attrValue))(),
+						var attrViewInstance = (V.attrModules[handle.id + attrKey] = V.parse(attrValue))(),
 							_shadowDIV = $.DOM.clone(shadowDIV);
-						// console.log(at = attrBuilder)
-						attrBuilder.append(_shadowDIV);
-						$.forIn(attrBuilder._triggers, function(triggerCollection, key) {
+						// console.log(at = attrViewInstance)
+						attrViewInstance.append(_shadowDIV);
+						$.forIn(attrViewInstance._triggers, function(triggerCollection, key) {
 							$.forEach(triggerCollection, function(trigger) {
 								var _newTrigger = $.create(trigger);
 								_newTrigger.event = function(NodeList, database, eventTrigger){
-									$.forIn(attrBuilder._triggers,function(attrTriggerCollection,attrTriggerKey){
+									$.forIn(attrViewInstance._triggers,function(attrTriggerCollection,attrTriggerKey){
 										$.forEach(attrTriggerCollection,function(attrTrigger){
-											attrTrigger.event(attrBuilder.NodeList, database, eventTrigger);
+											attrTrigger.event(attrViewInstance.NodeList, database, eventTrigger);
 										})
 									});
 									NodeList[handle.id].currentNode.setAttribute(attrKey, _shadowDIV.innerHTML)
 								};
 								// var _trigger = trigger.event,
 									// _newTrigger = function(NodeList, database, eventTrigger) {
-									// 	_trigger(attrBuilder.NodeList, database, eventTrigger);
+									// 	_trigger(attrViewInstance.NodeList, database, eventTrigger);
 									// 	console.log(attrKey, _shadowDIV.innerHTML, NodeList[handle.id].currentNode)
 									// 	NodeList[handle.id].currentNode.setAttribute(attrKey, _shadowDIV.innerHTML)
 									// };
