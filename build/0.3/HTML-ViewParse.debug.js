@@ -742,11 +742,11 @@ V.registerHandle("", function(handle, index, parentHandle) {
 	}
 	// console.log(textHandle,parentHandle.type);
 });
-var _commentPlaceholder = function(handle,parentHandle){
+var _commentPlaceholder = function(handle, parentHandle) {
 	var handleName = handle.handleName,
-		commentNode = $.DOM.Comment(handleName+handle.id),
+		commentNode = $.DOM.Comment(handleName + handle.id),
 		commentHandle = CommentHandle(commentNode) // commentHandle as Placeholder
-	$.push(handle.childNodes, commentHandle);
+		$.push(handle.childNodes, commentHandle);
 	$.insertAfter(parentHandle.childNodes, handle, commentHandle); //Node position calibration//no "$.insert" Avoid sequence error
 	return commentHandle;
 };
@@ -757,7 +757,7 @@ var placeholderHandle = function(handle, index, parentHandle) {
 	// 	var nextHandle = parentHandle.childNodes[index + i];
 	// } while (nextHandle && nextHandle.ignore);
 
-	var commentHandle = _commentPlaceholder(handle,parentHandle);//before return
+	var commentHandle = _commentPlaceholder(handle, parentHandle); //before return
 
 	// return function(NodeList_of_ViewInstance) {
 	// 	var nextNodeInstance = nextHandle && NodeList_of_ViewInstance[nextHandle.id].currentNode,
@@ -769,55 +769,59 @@ var placeholderHandle = function(handle, index, parentHandle) {
 V.registerHandle("#if", placeholderHandle);
 V.registerHandle("#else", placeholderHandle);
 V.registerHandle("/if", placeholderHandle);
-var _each_display = function(show_or_hidden,NodeList_of_ViewInstance){
+var _each_display = function(show_or_hidden, NodeList_of_ViewInstance) {
 	// console.log(show_or_hidden,"each");
 	var handle = this,
 		parentHandle = handle.parentNode,
 		comment_endeach_id,
 		arrViewInstances = handle.arrViewInstances;
-	$.forEach(parentHandle.childNodes,function(child_handle,index,cs){//get comment_endeach_id
-		if(child_handle.id === handle.id){
-			comment_endeach_id = cs[index+ 3].id;
+	$.forEach(parentHandle.childNodes, function(child_handle, index, cs) { //get comment_endeach_id
+		if (child_handle.id === handle.id) {
+			comment_endeach_id = cs[index + 3].id;
 			return false;
 		}
 	});
 	if (show_or_hidden) {
-		$.forEach(arrViewInstances,function(viewInstance){
+		$.forEach(arrViewInstances, function(viewInstance, index) {
 			// console.log(comment_endeach_id,NodeList_of_ViewInstance[comment_endeach_id],handle,parentHandle)
-			viewInstance.insert(NodeList_of_ViewInstance[comment_endeach_id].currentNode)	
+			viewInstance.insert(NodeList_of_ViewInstance[comment_endeach_id].currentNode)
+			// console.log(handle.len)
+			if (handle.len === index+1) {
+				return false;
+			}
 		})
-	}else{
-		$.forEach(arrViewInstances,function(viewInstance){
+	} else {
+		$.forEach(arrViewInstances, function(viewInstance) {
 			// console.log(viewInstance)
 			viewInstance.remove();
 		})
 	}
 };
-V.registerHandle("#each",function(handle, index, parentHandle){
-	
+V.registerHandle("#each", function(handle, index, parentHandle) {
+
 	var _shadowBody = $.DOM.clone(shadowBody),
 		eachModuleHandle = ElementHandle(_shadowBody),
 		endIndex = 0;
 
 	handle.arrViewInstances = [];
 	handle.len = 0;
-		// console.log()
-	$.forEach(parentHandle.childNodes,function(childHandle,index){
+	// console.log()
+	$.forEach(parentHandle.childNodes, function(childHandle, index) {
 		endIndex = index;
 		if (childHandle.handleName === "/each") {
 			return false
 		}
-		$.push(eachModuleHandle.childNodes,childHandle);
-	},index+1);
-// console.log(index+1,endIndex-index-1,parentHandle.childNodes)
-	parentHandle.childNodes.splice(index+1,endIndex-index-1);
-// console.log(parentHandle.childNodes)
+		$.push(eachModuleHandle.childNodes, childHandle);
+	}, index + 1);
+	// console.log(index+1,endIndex-index-1,parentHandle.childNodes)
+	parentHandle.childNodes.splice(index + 1, endIndex - index - 1);
+	// console.log(parentHandle.childNodes)
 	V.eachModules[handle.id] = View(eachModuleHandle);
 
 	handle.display = _each_display;
-	_commentPlaceholder(handle,parentHandle);//before return
+	_commentPlaceholder(handle, parentHandle); //before return
 });
-V.registerHandle("/each",placeholderHandle);
+V.registerHandle("/each", placeholderHandle);
 V.registerTrigger("#if", function(handle, index, parentHandle) {
 	// console.log(handle)
 	var id = handle.id,
