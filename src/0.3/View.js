@@ -117,7 +117,7 @@ function _buildTrigger(handleNodeTree) {
 									$.forIn(attrViewInstance._triggers, function(attrTriggerCollection, attrTriggerKey) {
 										attrViewInstance.set(attrTriggerKey, database[attrTriggerKey]);
 									});
-									console.log(attrKey,attrValue,_ = _shadowDIV)
+
 									var currentNode = NodeList[handle.id].currentNode,
 										attrOuter = _shadowDIV.innerText;
 									if (attrOuter === undefined) {
@@ -126,7 +126,7 @@ function _buildTrigger(handleNodeTree) {
 									if (attrKey === "style" && _isIE) {
 										currentNode.style.setAttribute('cssText', attrOuter);
 									} else if (attrKey.indexOf("on") === 0 && _event_by_fun) {
-										console.log(attrKey,attrOuter)
+										
 										currentNode.setAttribute(attrKey, Function(attrOuter));
 										if (typeof currentNode.getAttribute(attrKey) === "string") {
 											_event_by_fun = false;

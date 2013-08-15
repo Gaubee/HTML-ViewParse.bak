@@ -106,23 +106,25 @@ V.registerTrigger("#each", function(handle, index, parentHandle) {
 					inserNew = true;
 				}
 				var viewInstance = arrViewInstances[index];
-				if (!viewInstance._packingBag) { //be remove into packingBag
+				if (!viewInstance._canRemoveAble) { //had being recovered into the packingBag
 					inserNew = true;
-				}
-				if (inserNew) {
-					viewInstance.insert(NodeList_of_ViewInstance[comment_endeach_id].currentNode)
-					// console.log(NodeList_of_ViewInstance[id]._controllers)
 				}
 				$.forIn(eachItemData, function(dataVal, dataKey) {
 					if (viewInstance.get(dataKey)!==dataVal) {
 						viewInstance.set(dataKey, dataVal);
 					}
 				});
+				if (inserNew) {
+					viewInstance.insert(NodeList_of_ViewInstance[comment_endeach_id].currentNode)
+					// console.log(NodeList_of_ViewInstance[id]._controllers)
+				}
 				divideIndex = index;
 			});
 			// console.log(divideIndex)
 			divideIndex += 1;
 			$.forEach(arrViewInstances, function(eachItemHandle) {
+				// calibrate the top of handle's currentNode
+				eachItemHandle.NodeList[eachItemHandle.handleNodeTree.id].currentNode = NodeList_of_ViewInstance[parentHandle.id].currentNode;
 				eachItemHandle.remove();
 			}, divideIndex);
 			var lengthKey = arrDataHandleKey + ".length";

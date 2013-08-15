@@ -270,7 +270,7 @@ function _buildTrigger(handleNodeTree) {
 									$.forIn(attrViewInstance._triggers, function(attrTriggerCollection, attrTriggerKey) {
 										attrViewInstance.set(attrTriggerKey, database[attrTriggerKey]);
 									});
-									console.log(attrKey,attrValue,_ = _shadowDIV)
+
 									var currentNode = NodeList[handle.id].currentNode,
 										attrOuter = _shadowDIV.innerText;
 									if (attrOuter === undefined) {
@@ -279,7 +279,7 @@ function _buildTrigger(handleNodeTree) {
 									if (attrKey === "style" && _isIE) {
 										currentNode.style.setAttribute('cssText', attrOuter);
 									} else if (attrKey.indexOf("on") === 0 && _event_by_fun) {
-										console.log(attrKey,attrOuter)
+										
 										currentNode.setAttribute(attrKey, Function(attrOuter));
 										if (typeof currentNode.getAttribute(attrKey) === "string") {
 											_event_by_fun = false;
@@ -349,9 +349,17 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	self._database.get = function() {
 		self.get.apply(self, $.slice(arguments))
 	};
-	self._packingBag;
+	var el = NodeList[handleNodeTree.id].currentNode;
+	self._packingBag = el;
+	self._id = $.uid();
+	self._open = $.DOM.Comment(self._id + " _open");
+	self._close = $.DOM.Comment(self._id + " _close");
+	self._canRemoveAble = false;
+	$.DOM.insertBefore(el, self._open,el.childNodes[0]);
+	$.DOM.append(el, self._close);
 	self._triggers = {};
 	self.TEMP = {};
+
 	$.forIn(triggers, function(tiggerCollection, key) {
 		self._triggers[key] = tiggerCollection;
 	});
@@ -375,7 +383,7 @@ function _bubbleTrigger(tiggerCollection, NodeList, database, eventTrigger) {
 function _replaceTopHandleCurrent(self, el) {
 	var handleNodeTree = self.handleNodeTree,
 		NodeList = self.NodeList;
-	self._packingBag = self._packingBag || NodeList[handleNodeTree.id].currentNode
+	self._canRemoveAble = true;
 	NodeList[handleNodeTree.id].currentNode = el;
 	// self.reDraw();
 };
@@ -407,7 +415,7 @@ ViewInstance.prototype = {
 			NodeList = self.NodeList,
 			currentTopNode = NodeList[handleNodeTree.id].currentNode,
 			elParentNode = el.parentNode;
-
+		console.log(el,elParentNode)
 		$.forEach(currentTopNode.childNodes, function(child_node) {
 			$.DOM.insertBefore(elParentNode, child_node, el);
 		});
@@ -415,9 +423,31 @@ ViewInstance.prototype = {
 	},
 	remove: function() {
 		// console.log(this._packingBag)
-		if (this._packingBag) {
-			this.append(this._packingBag)
-			this._packingBag = undefined; //when be undefined,can't no be remove again. --> it should be insert
+		var self = this,
+			el = this._packingBag
+		if (self._canRemoveAble) {
+			var handleNodeTree = self.handleNodeTree,
+				NodeList = self.NodeList,
+				currentTopNode = NodeList[handleNodeTree.id].currentNode,
+				openNode = self._open,
+				closeNode = self._close,
+				startIndex = 0;
+			console.log(currentTopNode)
+			$.forEach(currentTopNode.childNodes, function(child_node,index) {
+				if (child_node === openNode) {
+					startIndex = index
+					console.log(startIndex)
+				}
+			});
+			$.forEach(currentTopNode.childNodes, function(child_node,index) {
+				// console.log(index,child_node,el)
+				$.DOM.append(el, child_node);
+				if (child_node === closeNode) {
+					return false;
+				}
+			},startIndex);
+			_replaceTopHandleCurrent(self, el);
+			this._canRemoveAble = false; //Has being recovered into the _packingBag,can't no be remove again. --> it should be insert
 		}
 	},
 	get: function get(key) {
@@ -878,23 +908,25 @@ V.registerTrigger("#each", function(handle, index, parentHandle) {
 					inserNew = true;
 				}
 				var viewInstance = arrViewInstances[index];
-				if (!viewInstance._packingBag) { //be remove into packingBag
+				if (!viewInstance._canRemoveAble) { //had being recovered into the packingBag
 					inserNew = true;
-				}
-				if (inserNew) {
-					viewInstance.insert(NodeList_of_ViewInstance[comment_endeach_id].currentNode)
-					// console.log(NodeList_of_ViewInstance[id]._controllers)
 				}
 				$.forIn(eachItemData, function(dataVal, dataKey) {
 					if (viewInstance.get(dataKey)!==dataVal) {
 						viewInstance.set(dataKey, dataVal);
 					}
 				});
+				if (inserNew) {
+					viewInstance.insert(NodeList_of_ViewInstance[comment_endeach_id].currentNode)
+					// console.log(NodeList_of_ViewInstance[id]._controllers)
+				}
 				divideIndex = index;
 			});
 			// console.log(divideIndex)
 			divideIndex += 1;
 			$.forEach(arrViewInstances, function(eachItemHandle) {
+				// calibrate the top of handle's currentNode
+				eachItemHandle.NodeList[eachItemHandle.handleNodeTree.id].currentNode = NodeList_of_ViewInstance[parentHandle.id].currentNode;
 				eachItemHandle.remove();
 			}, divideIndex);
 			var lengthKey = arrDataHandleKey + ".length";
