@@ -43,16 +43,7 @@
 			return new __proto__
 		}
 	}(Tool));
-</script>
-<script type="text/javascript">
-	ViewParser.scans();
 
-	var People = ViewParser.modules["people"],
-		us = People()
-		;
-	us.append(document.body);
-	us.set("name","Gaubee");
-	us.set("sex","0");
 	var data = [{
 		name:"ming",
 		sex:1//1:man,0:woman
@@ -66,7 +57,18 @@
 		name:"gang",
 		sex:1//1:man,0:woman
 	}];
-	us.set("us",data);
+</script>
+<script type="text/javascript">
+	ViewParser.scans();
+
+	var People = ViewParser.modules["people"],
+		us = People({
+			name:"Gaubee",
+			sex:1,
+			us:data
+		})
+		;
+	us.append(document.body);
 
 	var forkMe = ViewParser.modules["fork-me"],
 		fm = forkMe({

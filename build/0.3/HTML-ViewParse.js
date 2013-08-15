@@ -387,7 +387,7 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	self.handleNodeTree = handleNodeTree;
 	self.DOMArr = $.slice(handleNodeTree.childNodes);
 	self.NodeList = NodeList;
-	self._database = {};
+	self._database = database||{};
 	self._database.set = function(){
 		self.set.apply(self,$.slice(arguments))
 	};
@@ -402,9 +402,6 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	});
 	$.forEach(self._triggers["."], function(tiggerFun) { //const value
 		tiggerFun.event(NodeList,database);
-	});
-	$.forIn(database || {},function(val,key){
-		self._database[key] = val;
 	});
 };
 function _bubbleTrigger(tiggerCollection,NodeList,database,eventTrigger){
@@ -433,6 +430,16 @@ function _bubbleTrigger(tiggerCollection,NodeList,database,eventTrigger){
 	});
 };
 ViewInstance.prototype = {
+	reDraw:function(){
+		var self = this,
+			database = self._database;
+		// console.log(database)
+		$.forIn(database,function(val,key){
+			if (!/get|set/.test(key)) {
+				self.set(key,val);
+			}
+		});
+	},
 	append: function(el) {
 		var handleNodeTree = this.handleNodeTree,
 			NodeList = this.NodeList;
@@ -442,8 +449,10 @@ ViewInstance.prototype = {
 				$.DOM.append(el,NodeList[node.id].currentNode);
 			}
 		});
-		this._packingBag = NodeList[handleNodeTree.id].currentNode
+		// this._packingBag = NodeList[handleNodeTree.id].currentNode
+		this._packingBag = this._packingBag||NodeList[handleNodeTree.id].currentNode
 		NodeList[handleNodeTree.id].currentNode = el;
+		this.reDraw();
 	},
 	insert:function(el){
 		var handleNodeTree = this.handleNodeTree,
@@ -458,6 +467,7 @@ ViewInstance.prototype = {
 		this._packingBag = this._packingBag||NodeList[handleNodeTree.id].currentNode
 		// console.log("_packingBag:",handleNodeTree.id,this._packingBag)
 		NodeList[handleNodeTree.id].currentNode = elParentNode;
+		this.reDraw();
 	},
 	remove:function(){
 		// console.log(this._packingBag)
@@ -481,7 +491,9 @@ ViewInstance.prototype = {
 		if (oldValue != value) {
 			self._database[key] = value;
 		}
-		_bubbleTrigger.apply(self,[self._triggers[key],NodeList,database])
+		if (this._packingBag) {//_packingBag no null --> has be insert!
+			_bubbleTrigger.apply(self,[self._triggers[key],NodeList,database])
+		}
 	}
 };
 var _parse = function(node) {//get all childNodes
