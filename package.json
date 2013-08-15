@@ -1,6 +1,6 @@
 {
   "name": "HTML-ViewParse",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "MVC/MVVM's View modules",
   "dependencies": {
     "grunt": "~0.4.1",
