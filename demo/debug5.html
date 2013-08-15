@@ -16,7 +16,7 @@
 	{/if()}
 	<hr />
 	{#each({(us)})}
-		{(name)} is a<b>
+		{(name)} is a<b attr-style="color:{#if({(sex)})}red{#else()}blue{/if()};">
 		{#if(  {!({(sex)})}  )}
 		girl
 		{#else()}

@@ -278,58 +278,51 @@ function _buildTrigger(handleNodeTree) {
 			$.forEach(attrs, function(attrStr) {
 				// console.log("attr item:", attrStr)
 				var attrInfo = attrStr.search("="),
-					attrKey = $.trim(attrStr.substring(0,attrInfo)).toLowerCase(),
+					attrKey = $.trim(attrStr.substring(0, attrInfo)),
 					attrValue = node.getAttribute(attrKey),
-					attrKey = attrKey.indexOf(V.prefix)?attrKey:attrKey.replace(V.prefix,""),
+					attrKey = attrKey.toLowerCase(),
+					attrKey = attrKey.indexOf(V.prefix) ? attrKey : attrKey.replace(V.prefix, ""),
 					attrKey = (_isIE && IEfix[attrKey]) || attrKey
-					// attrValue = $.trim(attrStr.substring(attrInfo+1)),
-					// attrValue = $.isString(attrValue)?attrValue.substring(1,attrValue.length-1):attrValue;
-				// console.log("attr ", attrKey, " is template!(", attrValue, ")");
+
 				if (_matchRule.test(attrValue)) {
 					var attrViewInstance = (V.attrModules[handle.id + attrKey] = V.parse(attrValue))(),
 						_shadowDIV = $.DOM.clone(shadowDIV);
-					// console.log(at = attrViewInstance)
 					attrViewInstance.append(_shadowDIV);
 					$.forIn(attrViewInstance._triggers, function(triggerCollection, key) {
-						$.forEach(triggerCollection, function(trigger) {
-							var _newTrigger = $.create(trigger);
-							_newTrigger.event = function(NodeList, database, eventTrigger) {
-								$.forIn(attrViewInstance._triggers, function(attrTriggerCollection, attrTriggerKey) {
-									$.forEach(attrTriggerCollection, function(attrTrigger) {
-										attrTrigger.event(attrViewInstance.NodeList, database, eventTrigger);
-									})
-								});
-								var currentNode = NodeList[handle.id].currentNode,
-									attrValue = _shadowDIV.innerHTML;
+						if (key && key !== ".") {
+							$.forEach(triggerCollection, function(trigger) {
+								var _newTrigger = $.create(trigger);
+								_newTrigger.bubble = false;//this kind of Parent Handle can not be bubbling trigger.
+								_newTrigger.event = function(NodeList, database, eventTrigger) {
+									$.forIn(attrViewInstance._triggers, function(attrTriggerCollection, attrTriggerKey) {
+										attrViewInstance.set(attrTriggerKey,database[attrTriggerKey]);
+									});
+									var currentNode = NodeList[handle.id].currentNode,
+										attrValue = _shadowDIV.innerText;
 
-								// console.log("set attr:", attrKey, ":", attrValue)
-
-
-								if (attrKey === "style" && _isIE) {
-									currentNode.style.setAttribute('cssText', attrValue);
-								}else if(attrKey.indexOf("on")===0&& _event_by_fun){
-									// console.log("event:",attrValue)
-									currentNode.setAttribute(attrKey, Function(attrValue));
-									// currentNode[attrKey] = attrValue;
-									// currentNode.setAttribute(attrKey, attrValue);
-									if(typeof currentNode.getAttribute(attrKey)==="string"){
-										_event_by_fun = false;
+									if (attrKey === "style" && _isIE) {
+										currentNode.style.setAttribute('cssText', attrValue);
+									} else if (attrKey.indexOf("on") === 0 && _event_by_fun) {
+										currentNode.setAttribute(attrKey, Function(attrValue));
+										if (typeof currentNode.getAttribute(attrKey) === "string") {
+											_event_by_fun = false;
+											currentNode.setAttribute(attrKey, attrValue);
+										}
+									} else {
 										currentNode.setAttribute(attrKey, attrValue);
 									}
-								}else{
-									currentNode.setAttribute(attrKey, attrValue);
-								}
-							};
-							// var _trigger = trigger.event,
-							// _newTrigger = function(NodeList, database, eventTrigger) {
-							// 	_trigger(attrViewInstance.NodeList, database, eventTrigger);
-							// 	console.log(attrKey, _shadowDIV.innerHTML, NodeList[handle.id].currentNode)
-							// 	NodeList[handle.id].currentNode.setAttribute(attrKey, _shadowDIV.innerHTML)
-							// };
-							// trigger.event = _newTrigger;
-							$.unshift((triggers[key] = triggers[key] || []), _newTrigger); //Storage as key -> array
-							$.push(handle._triggers, _newTrigger); //Storage as array
-						})
+								};
+								// var _trigger = trigger.event,
+								// _newTrigger = function(NodeList, database, eventTrigger) {
+								// 	_trigger(attrViewInstance.NodeList, database, eventTrigger);
+								// 	console.log(attrKey, _shadowDIV.innerHTML, NodeList[handle.id].currentNode)
+								// 	NodeList[handle.id].currentNode.setAttribute(attrKey, _shadowDIV.innerHTML)
+								// };
+								// trigger.event = _newTrigger;
+								$.unshift((triggers[key] = triggers[key] || []), _newTrigger); //Storage as key -> array
+								$.push(handle._triggers, _newTrigger); //Storage as array
+							})
+						}
 					});
 				}
 			});
@@ -378,7 +371,7 @@ function _create(data) {
 	// console.log(self.handleNodeTree.newNode, DOMs);
 
 	// console.log("ViewInstance", ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers))
-	return ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers,data);
+	return ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers, data);
 };
 /*
  * View Instance constructor
@@ -861,7 +854,7 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 		// key:"",//default is ""
 		// chain: true,
 		event: function(NodeList_of_ViewInstance, database, triggerBy) {
-			var conditionVal = NodeList_of_ViewInstance[conditionHandleId]._data,
+			var conditionVal = !!NodeList_of_ViewInstance[conditionHandleId]._data,
 				parentNode = NodeList_of_ViewInstance[parentHandleId].currentNode,
 				markHandleId = comment_else_id, //if(true)
 				markHandle; //default is undefined --> insertBefore === appendChild
@@ -922,7 +915,6 @@ V.registerTrigger("#each", function(handle, index, parentHandle) {
 			var data = database[arrDataHandleKey];
 			var divideIndex = 0;
 			var inserNew;
-			if (true) {};
 			$.forEach(data, function(eachItemData, index) {
 				// console.log(arrViewInstances[index])
 				if (!arrViewInstances[index]) {
@@ -938,7 +930,9 @@ V.registerTrigger("#each", function(handle, index, parentHandle) {
 					// console.log(NodeList_of_ViewInstance[id]._controllers)
 				}
 				$.forIn(eachItemData, function(dataVal, dataKey) {
-					viewInstance.set(dataKey, dataVal);
+					if (viewInstance.get(dataKey)!==dataVal) {
+						viewInstance.set(dataKey, dataVal);
+					}
 				});
 				divideIndex = index;
 			});

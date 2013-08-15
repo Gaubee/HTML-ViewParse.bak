@@ -38,7 +38,7 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 		// key:"",//default is ""
 		// chain: true,
 		event: function(NodeList_of_ViewInstance, database, triggerBy) {
-			var conditionVal = NodeList_of_ViewInstance[conditionHandleId]._data,
+			var conditionVal = !!NodeList_of_ViewInstance[conditionHandleId]._data,
 				parentNode = NodeList_of_ViewInstance[parentHandleId].currentNode,
 				markHandleId = comment_else_id, //if(true)
 				markHandle; //default is undefined --> insertBefore === appendChild
@@ -99,7 +99,6 @@ V.registerTrigger("#each", function(handle, index, parentHandle) {
 			var data = database[arrDataHandleKey];
 			var divideIndex = 0;
 			var inserNew;
-			if (true) {};
 			$.forEach(data, function(eachItemData, index) {
 				// console.log(arrViewInstances[index])
 				if (!arrViewInstances[index]) {
@@ -115,7 +114,9 @@ V.registerTrigger("#each", function(handle, index, parentHandle) {
 					// console.log(NodeList_of_ViewInstance[id]._controllers)
 				}
 				$.forIn(eachItemData, function(dataVal, dataKey) {
-					viewInstance.set(dataKey, dataVal);
+					if (viewInstance.get(dataKey)!==dataVal) {
+						viewInstance.set(dataKey, dataVal);
+					}
 				});
 				divideIndex = index;
 			});
