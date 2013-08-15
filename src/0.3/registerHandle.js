@@ -6,13 +6,13 @@ V.registerHandle("", function(handle, index, parentHandle) {
 			i += 1;
 			var nextHandle = parentHandle.childNodes[index + i];
 		} while (nextHandle && nextHandle.ignore);
-		if (textHandle) { //textHandle as Placeholder
+		if (textHandle) { //textNode as Placeholder
 
-			textHandle.display = false;
+			$.insertAfter(parentHandle.childNodes, handle, textHandle);
+			//Node position calibration
+			//no "$.insert" Avoid sequence error
 
-			$.insertAfter(parentHandle.childNodes, handle, textHandle); //Node position calibration//no "$.insert" Avoid sequence error
 			return function(NodeList_of_ViewInstance) {
-				// console.log(this)
 				var nextNodeInstance = nextHandle && NodeList_of_ViewInstance[nextHandle.id].currentNode,
 					textNodeInstance = NodeList_of_ViewInstance[textHandle.id].currentNode,
 					parentNodeInstance = NodeList_of_ViewInstance[parentHandle.id].currentNode
@@ -23,40 +23,25 @@ V.registerHandle("", function(handle, index, parentHandle) {
 		if (textHandle) {
 			// console.log("ignore",textHandle)
 			textHandle.ignore = true;
-			textHandle.display = false;
 		}
 	}
-	// console.log(textHandle,parentHandle.type);
 });
 var _commentPlaceholder = function(handle, parentHandle) {
 	var handleName = handle.handleName,
 		commentNode = $.DOM.Comment(handleName + handle.id),
-		commentHandle = CommentHandle(commentNode) // commentHandle as Placeholder
-		$.push(handle.childNodes, commentHandle);
+		commentHandle = CommentHandle(commentNode); // commentHandle as Placeholder
+
+	$.push(handle.childNodes, commentHandle);
 	$.insertAfter(parentHandle.childNodes, handle, commentHandle); //Node position calibration//no "$.insert" Avoid sequence error
 	return commentHandle;
 };
 var placeholderHandle = function(handle, index, parentHandle) {
-	// var i = 0;
-	// do {
-	// 	i += 1;
-	// 	var nextHandle = parentHandle.childNodes[index + i];
-	// } while (nextHandle && nextHandle.ignore);
-
-	var commentHandle = _commentPlaceholder(handle, parentHandle); //before return
-
-	// return function(NodeList_of_ViewInstance) {
-	// 	var nextNodeInstance = nextHandle && NodeList_of_ViewInstance[nextHandle.id].currentNode,
-	// 		commentNodeInstance = NodeList_of_ViewInstance[commentHandle.id].currentNode,
-	// 		parentNodeInstance = NodeList_of_ViewInstance[parentHandle.id].currentNode
-	// 		$.DOM.insertBefore(parentNodeInstance, commentNodeInstance, nextNodeInstance); //Manually insert node
-	// }
+	var commentHandle = _commentPlaceholder(handle, parentHandle);
 };
 V.registerHandle("#if", placeholderHandle);
 V.registerHandle("#else", placeholderHandle);
 V.registerHandle("/if", placeholderHandle);
 var _each_display = function(show_or_hidden, NodeList_of_ViewInstance) {
-	// console.log(show_or_hidden,"each");
 	var handle = this,
 		parentHandle = handle.parentNode,
 		comment_endeach_id,
@@ -72,7 +57,7 @@ var _each_display = function(show_or_hidden, NodeList_of_ViewInstance) {
 			// console.log(comment_endeach_id,NodeList_of_ViewInstance[comment_endeach_id],handle,parentHandle)
 			viewInstance.insert(NodeList_of_ViewInstance[comment_endeach_id].currentNode)
 			// console.log(handle.len)
-			if (handle.len === index+1) {
+			if (handle.len === index + 1) {
 				return false;
 			}
 		})
@@ -84,14 +69,15 @@ var _each_display = function(show_or_hidden, NodeList_of_ViewInstance) {
 	}
 };
 V.registerHandle("#each", function(handle, index, parentHandle) {
-
+	//The Nodes between #each and /each will be pulled out , and not to be rendered.
+	//which will be combined into new View module.
 	var _shadowBody = $.DOM.clone(shadowBody),
 		eachModuleHandle = ElementHandle(_shadowBody),
 		endIndex = 0;
 
 	handle.arrViewInstances = [];
 	handle.len = 0;
-	// console.log()
+
 	$.forEach(parentHandle.childNodes, function(childHandle, index) {
 		endIndex = index;
 		if (childHandle.handleName === "/each") {
@@ -99,12 +85,11 @@ V.registerHandle("#each", function(handle, index, parentHandle) {
 		}
 		$.push(eachModuleHandle.childNodes, childHandle);
 	}, index + 1);
-	// console.log(index+1,endIndex-index-1,parentHandle.childNodes)
-	parentHandle.childNodes.splice(index + 1, endIndex - index - 1);
-	// console.log(parentHandle.childNodes)
-	V.eachModules[handle.id] = View(eachModuleHandle);
 
-	handle.display = _each_display;
-	_commentPlaceholder(handle, parentHandle); //before return
+	parentHandle.childNodes.splice(index + 1, endIndex - index - 1);//Pulled out
+	V.eachModules[handle.id] = View(eachModuleHandle);//Compiled into new View module
+
+	handle.display = _each_display;//Custom rendering function
+	_commentPlaceholder(handle, parentHandle);
 });
 V.registerHandle("/each", placeholderHandle);

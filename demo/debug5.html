@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>HTML-ViewParse</title>
+	<script type="text/javascript" src="../build/0.3/HTML-ViewParse.debug.js"></script>
+</head>
+<body>
+</body>
+
+<script type="text/template" name="people">
+	{(name)} is a 
+	{#if(  {!({(sex)})}  )}
+	girl
+	{#else()}
+	boy
+	{/if()}
+	<hr />
+	{#each({(us)})}
+		{(name)} is a<b>
+		{#if(  {!({(sex)})}  )}
+		girl
+		{#else()}
+		boy
+		{/if()}</b>
+		<br/>
+	{/each()}
+
+</script>
+<script type="text/template" name="fork-me">
+	<hr />
+	name:<input onchange="{(viewName)}.set('who',this.value)"/>
+	<input onclick="if(controller.{(who)})controller.{(who)}.changeSex()" value="change sex!" type="button">
+</script>
+
+</html>
+
+<script type="text/javascript">
+	this.Tool = {}
+	!(function($){
+		function __proto__(){};
+		$.create = function(proto){
+			__proto__.prototype = proto;
+			return new __proto__
+		}
+	}(Tool));
+</script>
+<script type="text/javascript">
+	ViewParser.scans();
+
+	var People = ViewParser.modules["people"],
+		us = People()
+		;
+	us.append(document.body);
+	us.set("name","Gaubee");
+	us.set("sex","0");
+	var data = [{
+		name:"ming",
+		sex:1//1:man,0:woman
+	},{
+		name:"hong",
+		sex:0//1:man,0:woman
+	},{
+		name:"dong",
+		sex:1//1:man,0:woman
+	},{
+		name:"gang",
+		sex:1//1:man,0:woman
+	}];
+	us.set("us",data);
+
+	var forkMe = ViewParser.modules["fork-me"],
+		fm = forkMe({
+			viewName:"fm"
+		})
+		;
+	fm.append(document.body);
+	fm.set("viewName","fm");
+	var controller = {};
+	(function(C){
+		function changeSex(){
+			data[this.index].sex = !data[this.index].sex;
+			us.set("us",data);
+		}
+		for(var i=0,item;item = data[i];i+=1){
+			C[item.name] = Tool.create(item);
+			C[item.name].index = i;
+			C[item.name].changeSex =changeSex
+		}
+	}(controller));
+</script>

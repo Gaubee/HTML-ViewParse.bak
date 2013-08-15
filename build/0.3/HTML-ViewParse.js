@@ -281,10 +281,11 @@ function _buildTrigger(handleNodeTree) {
 				// console.log("attr item:", attrStr)
 				var attrInfo = attrStr.search("="),
 					attrKey = $.trim(attrStr.substring(0,attrInfo)).toLowerCase(),
+					attrValue = node.getAttribute(attrKey),
 					attrKey = attrKey.indexOf(V.prefix)?attrKey:attrKey.replace(V.prefix,""),
-					attrKey = (_isIE && IEfix[attrKey]) || attrKey,
-					attrValue = $.trim(attrStr.substring(attrInfo+1)),
-					attrValue = $.isString(attrValue)?attrValue.substring(1,attrValue.length-1):attrValue;
+					attrKey = (_isIE && IEfix[attrKey]) || attrKey
+					// attrValue = $.trim(attrStr.substring(attrInfo+1)),
+					// attrValue = $.isString(attrValue)?attrValue.substring(1,attrValue.length-1):attrValue;
 				// console.log("attr ", attrKey, " is template!(", attrValue, ")");
 				if (_matchRule.test(attrValue)) {
 					var attrViewInstance = (V.attrModules[handle.id + attrKey] = V.parse(attrValue))(),
@@ -379,7 +380,7 @@ function _create(data) {
 	// console.log(self.handleNodeTree.newNode, DOMs);
 
 	// console.log("ViewInstance", ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers))
-	return ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers);
+	return ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers,data);
 };
 /*
  * View Instance constructor
@@ -393,7 +394,7 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	self.handleNodeTree = handleNodeTree;
 	self.DOMArr = $.slice(handleNodeTree.childNodes);
 	self.NodeList = NodeList;
-	self._database = database || {};
+	self._database = {};
 	self._database.set = function(){
 		self.set.apply(self,$.slice(arguments))
 	};
@@ -408,6 +409,9 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	});
 	$.forEach(self._triggers["."], function(tiggerFun) { //const value
 		tiggerFun.event(NodeList,database);
+	});
+	$.forIn(database || {},function(val,key){
+		self._database[key] = val;
 	});
 };
 function _bubbleTrigger(tiggerCollection,NodeList,database,eventTrigger){
@@ -466,7 +470,7 @@ ViewInstance.prototype = {
 		// console.log(this._packingBag)
 		if (this._packingBag) {
 			this.append(this._packingBag)
-			this._packingBag = undefined;
+			this._packingBag = undefined;//when be undefined,can't no be remove again. --> it should be insert
 		}
 	},
 	// _database: null,
@@ -487,14 +491,12 @@ ViewInstance.prototype = {
 		_bubbleTrigger.apply(self,[self._triggers[key],NodeList,database])
 	}
 };
-var _parse = function(node) {
+var _parse = function(node) {//get all childNodes
 	var result = [];
 	for (var i = 0, child_node, childNodes = node.childNodes; child_node = childNodes[i]; i += 1) {
 		switch (child_node.nodeType) {
 			case 3:
-				// console.log("child_node.data",child_node.data)
 				if ($.trim(child_node.data)) {
-					// console.log("node|(text):", child_node.data);
 					$.push(result, TextHandle(child_node))
 				}
 				break;
@@ -502,11 +504,9 @@ var _parse = function(node) {
 				if (child_node.tagName.toLowerCase() === "span" && child_node.getAttribute("type") === "handle") {
 					var handleName = child_node.getAttribute("handle");
 					if (handleName !== null) {
-						// console.log("node|(handle):", handleName);
 						$.push(result, TemplateHandle(handleName, child_node))
 					}
 				} else {
-					// console.log("node|(element):", child_node);
 					$.push(result, ElementHandle(child_node))
 				}
 				break;
@@ -533,13 +533,21 @@ function Handle(type, opction) {
 		self[key] = val;
 	});
 };
+Handle.init = function(self,weights){
+	self.id = $.uid();//weights <= 1
+	if (weights<2)return;
+	self._controllers = [];//weights <= 2
+	self._controllers[true] = [];//In the #if block scope
+	self._controllers[false] = [];//In the #else block scope
+	if (weights<3)return;
+	self._triggers = [];//weights <= 3
+};
 Handle.prototype = {
-	ignore: false, //ignore DOM
+	nodeType:0,
+	ignore: false, //ignore Handle --> no currentNode
 	display: false, //function of show or hidden DOM
+	childNodes:[],
 	parentNode: null,
-	childNodes: [], //rewrite
-	triggers: [], //rewrite
-	newNode: null,
 	type: "handle"
 };
 
@@ -548,16 +556,13 @@ Handle.prototype = {
  */
 
 function TemplateHandle(handleName, node) {
-	if (!(this instanceof TemplateHandle)) {
+	var self = this;
+	if (!(self instanceof TemplateHandle)) {
 		return new TemplateHandle(handleName, node);
 	}
-	this.handleName = $.trim(handleName);
-	this.childNodes = _parse(node);
-	this.id = $.uid();
-	this._triggers = [];
-	this._controllers = [];
-	this._controllers[true] = [];
-	this._controllers[false] = [];
+	self.handleName = $.trim(handleName);
+	self.childNodes = _parse(node);
+	Handle.init(self,3);
 };
 TemplateHandle.prototype = Handle("handle", {
 	ignore: true,
@@ -569,17 +574,13 @@ TemplateHandle.prototype = Handle("handle", {
  */
 
 function ElementHandle(node) {
-	if (!(this instanceof ElementHandle)) {
+	var self = this;
+	if (!(self instanceof ElementHandle)) {
 		return new ElementHandle(node);
 	}
-	this.node = node;
-	// this.attributeHandle = null;
-	this.childNodes = _parse(node);
-	this.id = $.uid();
-	this._triggers = [];
-	this._controllers = [];
-	this._controllers[true] = [];
-	this._controllers[false] = [];
+	self.node = node;
+	self.childNodes = _parse(node);
+	Handle.init(self,3);
 };
 ElementHandle.prototype = Handle("element", {
 	nodeType: 1
@@ -589,15 +590,12 @@ ElementHandle.prototype = Handle("element", {
  */
 
 function TextHandle(node) {
-	if (!(this instanceof TextHandle)) {
+	var self = this;
+	if (!(self instanceof TextHandle)) {
 		return new TextHandle(node);
 	}
-	this.node = node;
-	this.id = $.uid();
-	// this._triggers = [];
-	this._controllers = [];
-	this._controllers[true] = [];
-	this._controllers[false] = [];
+	self.node = node;
+	Handle.init(self,2);
 };
 TextHandle.prototype = Handle("text", {
 	nodeType: 3
@@ -607,11 +605,12 @@ TextHandle.prototype = Handle("text", {
  */
 
 function CommentHandle(node) {
-	if (!(this instanceof CommentHandle)) {
+	var self = this;
+	if (!(self instanceof CommentHandle)) {
 		return new CommentHandle(node);
 	}
-	this.node = node;
-	this.id = $.uid();
+	self.node = node;
+	Handle.init(self,1);
 };
 CommentHandle.prototype = Handle("comment", {
 	nodeType: 8
@@ -619,39 +618,52 @@ CommentHandle.prototype = Handle("comment", {
 /*
  * parse function
  */
-
 /*
  * parse rule
  */
-var _placeholder = function(){
-	return "@"+Math.random().toString(36).substring(2)
+var _placeholder = function() {
+	return "@" + Math.random().toString(36).substring(2)
 }
 var placeholder = {
-	"<":"&lt;",
-	">":"&gt;",
-	"\\":"\\\\",
-	"{":_placeholder(),
-	"(":_placeholder(),
-	")":_placeholder(),
-	"}":_placeholder()
+	"<": "&lt;",
+	">": "&gt;",
+	"{": _placeholder(),
+	"(": _placeholder(),
+	")": _placeholder(),
+	"}": _placeholder()
 }
-var _r = RegExp();
+var _Rg = function(s) {
+	return RegExp(s, "g")
+}
+var placeholderReg = {
+	"<": /</g,
+	">": />/g,
+	"/{": /\\\{/g,
+	"{": _Rg(placeholder["{"]),
+	"/(": /\\\(/g,
+	"(": _Rg(placeholder["("]),
+	"/)": /\\\)/g,
+	")": _Rg(placeholder[")"]),
+	"/}": /\\\}/g,
+	"}": _Rg(placeholder["}"])
+}
+var _head = /\{([\w\W]*?)\(/g,
+	_footer = /\)[\s]*\}/g;
 
 function parseRule(str) {
 	var parseStr = str
-		.replace(/</g,placeholder["<"])
-		.replace(/>/g,placeholder[">"])
-		// .replace(/\\/g,placeholder["\\"])
-		.replace(/\\\{/g,placeholder["{"])
-		.replace(/\\\(/g,placeholder["("])
-		.replace(/\\\)/g,placeholder[")"])
-		.replace(/\\\}/g,placeholder["}"])
-		.replace(/\{([\w\W]*?)\(/g, "<span type='handle' handle='$1'>")
-		.replace(/\)[\s]*\}/g, "</span>")
-		.replace([_r.compile(placeholder["{"],"g"),_r][1],"{")
-		.replace([_r.compile(placeholder["("],"g"),_r][1],"(")
-		.replace([_r.compile(placeholder[")"],"g"),_r][1],")")
-		.replace([_r.compile(placeholder["}"],"g"),_r][1],"}");
+		.replace(/</g, placeholder["<"])
+		.replace(/>/g, placeholder[">"])
+		.replace(placeholderReg["/{"], placeholder["{"])
+		.replace(placeholderReg["/("], placeholder["("])
+		.replace(placeholderReg["/)"], placeholder[")"])
+		.replace(placeholderReg["/}"], placeholder["}"])
+		.replace(_head, "<span type='handle' handle='$1'>")
+		.replace(_footer, "</span>")
+		.replace(placeholderReg["{"], "{")
+		.replace(placeholderReg["("], "(")
+		.replace(placeholderReg[")"], ")")
+		.replace(placeholderReg["}"], "}");
 	return parseStr;
 };
 var _matchRule = /\{[\w\w]*?\([\w\W]*?\)[\s]*\}/;
@@ -660,11 +672,10 @@ var _matchRule = /\{[\w\w]*?\([\w\W]*?\)[\s]*\}/;
  */
 
 var V = global.ViewParser = {
-	prefix:"attr-",
+	prefix: "attr-",
 	parse: function(htmlStr) {
 		var _shadowBody = $.DOM.clone(shadowBody);
 		_shadowBody.innerHTML = htmlStr;
-		// console.log("htmlStr:",htmlStr)
 		var insertBefore = [];
 		_traversal(_shadowBody, function(node, index, parentNode) {
 			if (node.nodeType === 3) {
@@ -675,38 +686,35 @@ var V = global.ViewParser = {
 				});
 			}
 		});
-		$.forEach(insertBefore,function(item){
+		$.forEach(insertBefore, function(item) {
 			var node = item.baseNode,
 				parentNode = item.parentNode
 				insertNodesHTML = item.insertNodesHTML;
-				shadowDIV.innerHTML = insertNodesHTML;
+			shadowDIV.innerHTML = insertNodesHTML;
 			//Using innerHTML rendering is complete immediate operation DOM, 
 			//innerHTML otherwise covered again, the node if it is not, 
 			//then memory leaks, IE can not get to the full node.
-			$.forEach(shadowDIV.childNodes,function(refNode){
-				$.DOM.insertBefore(parentNode,refNode, node)
+			$.forEach(shadowDIV.childNodes, function(refNode) {
+				$.DOM.insertBefore(parentNode, refNode, node)
 			})
 			parentNode.removeChild(node);
 		});
 		_shadowBody.innerHTML = _shadowBody.innerHTML;
-		// console.log("_shadowBody.innerHTML:",_shadowBody.innerHTML)
 		var result = ElementHandle(_shadowBody);
 		return View(result);
 	},
 	scans: function() {
-		els = 
-		$.forEach(document.getElementsByTagName("script"),function(scriptNode){
+		$.forEach(document.getElementsByTagName("script"), function(scriptNode) {
 			if (scriptNode.getAttribute("type") === "text/template") {
 				V.modules[scriptNode.getAttribute("name")] = V.parse(scriptNode.innerHTML);
 			}
 		});
 	},
 	registerTrigger: function(handleName, triggerFactory) {
-		// try {
-			V.triggers[handleName] = triggerFactory;
-		// } catch (e) {
-		// 	console.wran(e.message)
+		// if (V.triggers[handleName]) {
+		// 	throw handleName + " trigger already exists.";
 		// }
+		V.triggers[handleName] = triggerFactory;
 	},
 	registerHandle: function(handleName, handle) {
 		// if (V.handles[handleName]) {
@@ -717,8 +725,8 @@ var V = global.ViewParser = {
 	triggers: {},
 	handles: {},
 	modules: {},
-	attrModules:{},
-	eachModules:{}
+	attrModules: {},
+	eachModules: {}
 };
 V.registerHandle("", function(handle, index, parentHandle) {
 	var textHandle = handle.childNodes[0];
@@ -728,13 +736,13 @@ V.registerHandle("", function(handle, index, parentHandle) {
 			i += 1;
 			var nextHandle = parentHandle.childNodes[index + i];
 		} while (nextHandle && nextHandle.ignore);
-		if (textHandle) { //textHandle as Placeholder
+		if (textHandle) { //textNode as Placeholder
 
-			textHandle.display = false;
+			$.insertAfter(parentHandle.childNodes, handle, textHandle);
+			//Node position calibration
+			//no "$.insert" Avoid sequence error
 
-			$.insertAfter(parentHandle.childNodes, handle, textHandle); //Node position calibration//no "$.insert" Avoid sequence error
 			return function(NodeList_of_ViewInstance) {
-				// console.log(this)
 				var nextNodeInstance = nextHandle && NodeList_of_ViewInstance[nextHandle.id].currentNode,
 					textNodeInstance = NodeList_of_ViewInstance[textHandle.id].currentNode,
 					parentNodeInstance = NodeList_of_ViewInstance[parentHandle.id].currentNode
@@ -745,40 +753,25 @@ V.registerHandle("", function(handle, index, parentHandle) {
 		if (textHandle) {
 			// console.log("ignore",textHandle)
 			textHandle.ignore = true;
-			textHandle.display = false;
 		}
 	}
-	// console.log(textHandle,parentHandle.type);
 });
 var _commentPlaceholder = function(handle, parentHandle) {
 	var handleName = handle.handleName,
 		commentNode = $.DOM.Comment(handleName + handle.id),
-		commentHandle = CommentHandle(commentNode) // commentHandle as Placeholder
-		$.push(handle.childNodes, commentHandle);
+		commentHandle = CommentHandle(commentNode); // commentHandle as Placeholder
+
+	$.push(handle.childNodes, commentHandle);
 	$.insertAfter(parentHandle.childNodes, handle, commentHandle); //Node position calibration//no "$.insert" Avoid sequence error
 	return commentHandle;
 };
 var placeholderHandle = function(handle, index, parentHandle) {
-	// var i = 0;
-	// do {
-	// 	i += 1;
-	// 	var nextHandle = parentHandle.childNodes[index + i];
-	// } while (nextHandle && nextHandle.ignore);
-
-	var commentHandle = _commentPlaceholder(handle, parentHandle); //before return
-
-	// return function(NodeList_of_ViewInstance) {
-	// 	var nextNodeInstance = nextHandle && NodeList_of_ViewInstance[nextHandle.id].currentNode,
-	// 		commentNodeInstance = NodeList_of_ViewInstance[commentHandle.id].currentNode,
-	// 		parentNodeInstance = NodeList_of_ViewInstance[parentHandle.id].currentNode
-	// 		$.DOM.insertBefore(parentNodeInstance, commentNodeInstance, nextNodeInstance); //Manually insert node
-	// }
+	var commentHandle = _commentPlaceholder(handle, parentHandle);
 };
 V.registerHandle("#if", placeholderHandle);
 V.registerHandle("#else", placeholderHandle);
 V.registerHandle("/if", placeholderHandle);
 var _each_display = function(show_or_hidden, NodeList_of_ViewInstance) {
-	// console.log(show_or_hidden,"each");
 	var handle = this,
 		parentHandle = handle.parentNode,
 		comment_endeach_id,
@@ -794,7 +787,7 @@ var _each_display = function(show_or_hidden, NodeList_of_ViewInstance) {
 			// console.log(comment_endeach_id,NodeList_of_ViewInstance[comment_endeach_id],handle,parentHandle)
 			viewInstance.insert(NodeList_of_ViewInstance[comment_endeach_id].currentNode)
 			// console.log(handle.len)
-			if (handle.len === index+1) {
+			if (handle.len === index + 1) {
 				return false;
 			}
 		})
@@ -806,14 +799,15 @@ var _each_display = function(show_or_hidden, NodeList_of_ViewInstance) {
 	}
 };
 V.registerHandle("#each", function(handle, index, parentHandle) {
-
+	//The Nodes between #each and /each will be pulled out , and not to be rendered.
+	//which will be combined into new View module.
 	var _shadowBody = $.DOM.clone(shadowBody),
 		eachModuleHandle = ElementHandle(_shadowBody),
 		endIndex = 0;
 
 	handle.arrViewInstances = [];
 	handle.len = 0;
-	// console.log()
+
 	$.forEach(parentHandle.childNodes, function(childHandle, index) {
 		endIndex = index;
 		if (childHandle.handleName === "/each") {
@@ -821,13 +815,12 @@ V.registerHandle("#each", function(handle, index, parentHandle) {
 		}
 		$.push(eachModuleHandle.childNodes, childHandle);
 	}, index + 1);
-	// console.log(index+1,endIndex-index-1,parentHandle.childNodes)
-	parentHandle.childNodes.splice(index + 1, endIndex - index - 1);
-	// console.log(parentHandle.childNodes)
-	V.eachModules[handle.id] = View(eachModuleHandle);
 
-	handle.display = _each_display;
-	_commentPlaceholder(handle, parentHandle); //before return
+	parentHandle.childNodes.splice(index + 1, endIndex - index - 1);//Pulled out
+	V.eachModules[handle.id] = View(eachModuleHandle);//Compiled into new View module
+
+	handle.display = _each_display;//Custom rendering function
+	_commentPlaceholder(handle, parentHandle);
 });
 V.registerHandle("/each", placeholderHandle);
 V.registerTrigger("#if", function(handle, index, parentHandle) {
@@ -836,26 +829,17 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 		ignoreHandleType = /handle|comment/,
 		conditionHandleId = handle.childNodes[0].id,
 		parentHandleId = parentHandle.id,
-		// comment_if_id = $.lastItem(handle.childNodes).id,
-		comment_else_id,
-		comment_endif_id,
+
+		comment_else_id, //#if inserBefore #else
+		comment_endif_id, //#else inserBefore /if
+
 		conditionDOM = handle._controllers,
-		// = {
-		// 	"true": [], //true is "if"
-		// 	"false": [] //false is "else"
-		// },
-		conditionStatus = true, //"if";
+		conditionStatus = true, //the #if block scope
 		trigger,
 		deep = 0;
 	// console.log(parentHandle, index)
 	$.forEach(parentHandle.childNodes, function(child_handle, i, childHandles) {
-		// if (child_handle.type !== "handle") {
-		/*if (!ignoreHandleType.test(child_handle.type)) {
-			// console.log(child_handle)
-			$.push(child_handle._controllers, id);
-			// $.push(child_handle._controllers[conditionStatus])
-			$.push(conditionDOM[conditionStatus], child_handle.id);
-		} else */
+
 		if (child_handle.handleName === "#if") {
 			deep += 1
 		} else if (child_handle.handleName === "#else") {
@@ -870,13 +854,11 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 				return false;
 			}
 		} else if (child_handle.type !== "comment") {
-			// console.log(child_handle)
 			$.push(child_handle._controllers, id);
-			// $.push(child_handle._controllers[conditionStatus])
 			$.push(conditionDOM[conditionStatus], child_handle.id);
 		}
 	}, index); // no (index + 1):scan itself:deep === 0 --> conditionStatus = !conditionStatus;
-	// console.log(conditionDOM);
+
 	trigger = {
 		// key:"",//default is ""
 		// chain: true,
@@ -898,18 +880,17 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 						node = currentHandle.currentNode,
 						placeholderNode = (NodeList_of_ViewInstance[id].placeholderNode = NodeList_of_ViewInstance[id].placeholderNode || $.DOM.Comment(id)),
 						display = true;
-					// console.log(node,currentHandle._controllers)
+
 					$.forEach(currentHandle._controllers, function(controller_id) {
+						//Traverse all Logic Controller(if-else-endif) to determine whether each Controller are allowed to display it.
 						var controllerHandle = NodeList_of_ViewInstance[controller_id]
-						//console.log(controllerHandle._data,controllerHandle._controllers,controllerHandle._controllers[controllerHandle._data])
-						// console.log(currentHandle.id)
-						display = display && ($.indexOf(controllerHandle._controllers[controllerHandle._data ? true : false], currentHandle.id) !== -1);
+						return display = display && ($.indexOf(controllerHandle._controllers[controllerHandle._data ? true : false], currentHandle.id) !== -1);
+						//when display is false,abort traversing
 					});
 					if (display) {
 						if (currentHandle.display) { //Custom Display Function,default is false
-							currentHandle.display(true,NodeList_of_ViewInstance, database, triggerBy)
-						} else {
-							// console.log("show", currentHandle)
+							currentHandle.display(true, NodeList_of_ViewInstance, database, triggerBy)
+						} else if (node) {
 							$.DOM.replace(parentNode, node, placeholderNode)
 						}
 					}
@@ -918,29 +899,17 @@ V.registerTrigger("#if", function(handle, index, parentHandle) {
 					var currentHandle = NodeList_of_ViewInstance[id],
 						node = currentHandle.currentNode,
 						placeholderNode = (currentHandle.placeholderNode = currentHandle.placeholderNode || $.DOM.Comment(id));
-					// console.log("removeChild", node, id, parentNode)
-					// $.DOM.removeChild(node, parentNode);
-					// console.log(parentNode, placeholderNode, node)
+
 					if (currentHandle.display) { //Custom Display Function,default is false
-						currentHandle.display(false,NodeList_of_ViewInstance, database, triggerBy)
-					} else {
+						currentHandle.display(false, NodeList_of_ViewInstance, database, triggerBy)
+					} else if (node) {
 						$.DOM.replace(parentNode, placeholderNode, node)
 					}
 				})
 			}
 		}
 	}
-	// var result = {
-	// 	// key:"",//default is ""
-	// 	handle: handle,
-	// 	event: function(NodeList_of_ViewInstance) {
-	// 		$.forEach(parentHandle.childNodes, function(child_handle, i, childHandles) {
-	// 			if (child_handle.id !== id) {
 
-	// 			}
-	// 		});
-	// 	}
-	// }
 	return trigger;
 });
 V.registerTrigger("#each", function(handle, index, parentHandle) {
@@ -949,7 +918,7 @@ V.registerTrigger("#each", function(handle, index, parentHandle) {
 		comment_endeach_id = parentHandle.childNodes[index + 3].id, //eachHandle --> eachComment --> endeachHandle --> endeachComment
 		arrViewInstances = handle.arrViewInstances,
 		trigger;
-	// console.log(handle)
+
 	trigger = {
 		event: function(NodeList_of_ViewInstance, database) {
 			var data = database[arrDataHandleKey];
@@ -963,20 +932,20 @@ V.registerTrigger("#each", function(handle, index, parentHandle) {
 					inserNew = true;
 				}
 				var viewInstance = arrViewInstances[index];
-				if (viewInstance._packingBag) {//be remove into packingBag
+				if (!viewInstance._packingBag) { //be remove into packingBag
 					inserNew = true;
 				}
-				$.forIn(eachItemData, function(dataVal, dataKey) {
-					viewInstance.set(dataKey, dataVal);
-				});
 				if (inserNew) {
 					viewInstance.insert(NodeList_of_ViewInstance[comment_endeach_id].currentNode)
 					// console.log(NodeList_of_ViewInstance[id]._controllers)
 				}
+				$.forIn(eachItemData, function(dataVal, dataKey) {
+					viewInstance.set(dataKey, dataVal);
+				});
 				divideIndex = index;
 			});
 			// console.log(divideIndex)
-			divideIndex+=1;
+			divideIndex += 1;
 			$.forEach(arrViewInstances, function(eachItemHandle) {
 				eachItemHandle.remove();
 			}, divideIndex);
@@ -1017,14 +986,13 @@ V.registerTrigger("", function(handle, index, parentHandle) {
 				bubble: true,
 				event: function(NodeList_of_ViewInstance, database) {
 					NodeList_of_ViewInstance[this.handleId]._data = database[key];
-					// console.log("sex!!!", NodeList_of_ViewInstance[this.handleId])
 				}
 			};
 		}
 	}
 	return trigger;
 });
-V.registerTrigger("equa", function(handle, index, parentHandle) {
+var _equal = function(handle, index, parentHandle) { //Equal
 	var childHandlesId = [],
 		trigger;
 	$.forEach(handle.childNodes, function(child_handle) {
@@ -1043,13 +1011,28 @@ V.registerTrigger("equa", function(handle, index, parentHandle) {
 				if (equal) {
 					return false; //stop forEach
 				}
-			}, 1); //start from 1;
-			// console.log(equal)
-			NodeList_of_ViewInstance[this.handleId]._data = equal;
+			}, 1); //start from second;
+			NodeList_of_ViewInstance[this.handleId]._data = !!equal;
 		}
 	}
 	return trigger;
-});
+}
+V.registerTrigger("equa", _equal);
+V.registerTrigger("==", _equal);
+var _nagete = function(handle, index, parentHandle) { //Negate
+	var nageteHandlesId = handle.childNodes[0].id,
+		trigger;
+	trigger = {
+		// key:"",//default key === ""
+		bubble: true,
+		event: function(NodeList_of_ViewInstance, database) {
+			NodeList_of_ViewInstance[this.handleId]._data = !NodeList_of_ViewInstance[nageteHandlesId]._data; //first value
+		}
+	}
+	return trigger;
+}
+V.registerTrigger("nega", _nagete);
+V.registerTrigger("!", _nagete);
 // Avoid `console` errors in browsers that lack a console.
 (function() {
     var method;

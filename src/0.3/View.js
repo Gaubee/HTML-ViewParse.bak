@@ -103,10 +103,11 @@ function _buildTrigger(handleNodeTree) {
 				// console.log("attr item:", attrStr)
 				var attrInfo = attrStr.search("="),
 					attrKey = $.trim(attrStr.substring(0,attrInfo)).toLowerCase(),
+					attrValue = node.getAttribute(attrKey),
 					attrKey = attrKey.indexOf(V.prefix)?attrKey:attrKey.replace(V.prefix,""),
-					attrKey = (_isIE && IEfix[attrKey]) || attrKey,
-					attrValue = $.trim(attrStr.substring(attrInfo+1)),
-					attrValue = $.isString(attrValue)?attrValue.substring(1,attrValue.length-1):attrValue;
+					attrKey = (_isIE && IEfix[attrKey]) || attrKey
+					// attrValue = $.trim(attrStr.substring(attrInfo+1)),
+					// attrValue = $.isString(attrValue)?attrValue.substring(1,attrValue.length-1):attrValue;
 				// console.log("attr ", attrKey, " is template!(", attrValue, ")");
 				if (_matchRule.test(attrValue)) {
 					var attrViewInstance = (V.attrModules[handle.id + attrKey] = V.parse(attrValue))(),
@@ -201,5 +202,5 @@ function _create(data) {
 	// console.log(self.handleNodeTree.newNode, DOMs);
 
 	// console.log("ViewInstance", ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers))
-	return ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers);
+	return ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers,data);
 };

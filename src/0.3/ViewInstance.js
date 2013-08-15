@@ -10,7 +10,7 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	self.handleNodeTree = handleNodeTree;
 	self.DOMArr = $.slice(handleNodeTree.childNodes);
 	self.NodeList = NodeList;
-	self._database = database || {};
+	self._database = {};
 	self._database.set = function(){
 		self.set.apply(self,$.slice(arguments))
 	};
@@ -25,6 +25,9 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	});
 	$.forEach(self._triggers["."], function(tiggerFun) { //const value
 		tiggerFun.event(NodeList,database);
+	});
+	$.forIn(database || {},function(val,key){
+		self._database[key] = val;
 	});
 };
 function _bubbleTrigger(tiggerCollection,NodeList,database,eventTrigger){
@@ -83,7 +86,7 @@ ViewInstance.prototype = {
 		// console.log(this._packingBag)
 		if (this._packingBag) {
 			this.append(this._packingBag)
-			this._packingBag = undefined;
+			this._packingBag = undefined;//when be undefined,can't no be remove again. --> it should be insert
 		}
 	},
 	// _database: null,
