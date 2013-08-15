@@ -136,13 +136,7 @@ function _buildTrigger(handleNodeTree) {
 										currentNode.setAttribute(attrKey, attrValue);
 									}
 								};
-								// var _trigger = trigger.event,
-								// _newTrigger = function(NodeList, database, eventTrigger) {
-								// 	_trigger(attrViewInstance.NodeList, database, eventTrigger);
-								// 	console.log(attrKey, _shadowDIV.innerHTML, NodeList[handle.id].currentNode)
-								// 	NodeList[handle.id].currentNode.setAttribute(attrKey, _shadowDIV.innerHTML)
-								// };
-								// trigger.event = _newTrigger;
+								
 								$.unshift((triggers[key] = triggers[key] || []), _newTrigger); //Storage as key -> array
 								$.push(handle._triggers, _newTrigger); //Storage as array
 							})
@@ -167,33 +161,19 @@ function _create(data) {
 			var currentParentNode = NodeList_of_ViewInstance[parentNode.id].currentNode || topNode.currentNode;
 			var currentNode = node.currentNode = $.DOM.clone(node.node);
 			$.DOM.append(currentParentNode, currentNode);
-			// if (node.type === "comment") {
-			// 	console.log(node.id,node.currentNode,NodeList_of_ViewInstance[node.id]);
-			// }
+		}else{
+
+			_traversal(node,function(node){//ignore Node's childNodes will be ignored too.
+				node = $.pushByID(NodeList_of_ViewInstance, $.create(node));
+			});
+			return false
 		}
 	});
 
 
-	// _traversal(self.handleNodeTree, function(node, index, parentNode) {
-	// 	if (!node.ignore && node.display) { //build DOM construction
-	// 		parentNode = node.parentNode;
-	// 		$.DOM.append(parentNode.newNode, node.newNode)
-	// 	}
-	// 	var item = {
-	// 		currentNode: node.newNode,
-	// 		triggers: [],
-	// 		viewParseNode: node
-	// 	};
-	// 	// console.log(node.type,node.id)
-	// 	$.push(DOMs, item);
-	// 	DOMs["hashid|" + node.id] = item;
-	// });
 	$.forEach(self._handles, function(handle) {
-		// handle(NodeList_of_ViewInstance);
 		handle.call(self, NodeList_of_ViewInstance);
 	});
-	// console.log(self.handleNodeTree.newNode, DOMs);
 
-	// console.log("ViewInstance", ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers))
 	return ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers, data);
 };

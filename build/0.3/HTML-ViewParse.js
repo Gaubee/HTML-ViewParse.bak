@@ -314,13 +314,7 @@ function _buildTrigger(handleNodeTree) {
 										currentNode.setAttribute(attrKey, attrValue);
 									}
 								};
-								// var _trigger = trigger.event,
-								// _newTrigger = function(NodeList, database, eventTrigger) {
-								// 	_trigger(attrViewInstance.NodeList, database, eventTrigger);
-								// 	console.log(attrKey, _shadowDIV.innerHTML, NodeList[handle.id].currentNode)
-								// 	NodeList[handle.id].currentNode.setAttribute(attrKey, _shadowDIV.innerHTML)
-								// };
-								// trigger.event = _newTrigger;
+								
 								$.unshift((triggers[key] = triggers[key] || []), _newTrigger); //Storage as key -> array
 								$.push(handle._triggers, _newTrigger); //Storage as array
 							})
@@ -345,34 +339,20 @@ function _create(data) {
 			var currentParentNode = NodeList_of_ViewInstance[parentNode.id].currentNode || topNode.currentNode;
 			var currentNode = node.currentNode = $.DOM.clone(node.node);
 			$.DOM.append(currentParentNode, currentNode);
-			// if (node.type === "comment") {
-			// 	console.log(node.id,node.currentNode,NodeList_of_ViewInstance[node.id]);
-			// }
+		}else{
+
+			_traversal(node,function(node){//ignore Node's childNodes will be ignored too.
+				node = $.pushByID(NodeList_of_ViewInstance, $.create(node));
+			});
+			return false
 		}
 	});
 
 
-	// _traversal(self.handleNodeTree, function(node, index, parentNode) {
-	// 	if (!node.ignore && node.display) { //build DOM construction
-	// 		parentNode = node.parentNode;
-	// 		$.DOM.append(parentNode.newNode, node.newNode)
-	// 	}
-	// 	var item = {
-	// 		currentNode: node.newNode,
-	// 		triggers: [],
-	// 		viewParseNode: node
-	// 	};
-	// 	// console.log(node.type,node.id)
-	// 	$.push(DOMs, item);
-	// 	DOMs["hashid|" + node.id] = item;
-	// });
 	$.forEach(self._handles, function(handle) {
-		// handle(NodeList_of_ViewInstance);
 		handle.call(self, NodeList_of_ViewInstance);
 	});
-	// console.log(self.handleNodeTree.newNode, DOMs);
 
-	// console.log("ViewInstance", ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers))
 	return ViewInstance(self.handleNodeTree, NodeList_of_ViewInstance, self._triggers, data);
 };
 /*
@@ -387,38 +367,40 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 	self.handleNodeTree = handleNodeTree;
 	self.DOMArr = $.slice(handleNodeTree.childNodes);
 	self.NodeList = NodeList;
-	self._database = database||{};
-	self._database.set = function(){
-		self.set.apply(self,$.slice(arguments))
+	self._database = database || {};
+	self._database.set = function() {
+		self.set.apply(self, $.slice(arguments))
 	};
-	self._database.get =  function(){
-		self.get.apply(self,$.slice(arguments))
+	self._database.get = function() {
+		self.get.apply(self, $.slice(arguments))
 	};
 	self._packingBag;
 	self._triggers = {};
 	self.TEMP = {};
-	$.forIn(triggers,function(tiggerCollection,key){
+	$.forIn(triggers, function(tiggerCollection, key) {
 		self._triggers[key] = tiggerCollection;
 	});
 	$.forEach(self._triggers["."], function(tiggerFun) { //const value
-		tiggerFun.event(NodeList,database);
+		tiggerFun.event(NodeList, database);
 	});
+	self.reDraw()
 };
-function _bubbleTrigger(tiggerCollection,NodeList,database,eventTrigger){
+
+function _bubbleTrigger(tiggerCollection, NodeList, database, eventTrigger) {
 	var self = this;
-	$.forEach(tiggerCollection,function(trigger){
+	$.forEach(tiggerCollection, function(trigger) {
 		// if (trigger.chain) {
 		// 	console.log("key:",trigger.key,trigger,",chain!!")
 		// 	var chainTriggers = self._triggers[trigger.key],
 		// 		index = $.indexOf(chainTriggers,trigger);
 		// 	for(var i = 0;i<index;i+=1){
-				
+
 		// 	}
 		// }
-		trigger.event(NodeList,database,eventTrigger);
+		trigger.event(NodeList, database, eventTrigger);
 		if (trigger.bubble) {
 			var parentNode = NodeList[trigger.handleId].parentNode;
-			parentNode&&_bubbleTrigger.apply(self,[parentNode._triggers,NodeList,database,trigger]);
+			parentNode && _bubbleTrigger.apply(self, [parentNode._triggers, NodeList, database, trigger]);
 		}
 		// if (trigger.chain) {
 		// 	$.forEach(chainTriggers,function(chain_trigger){
@@ -429,51 +411,53 @@ function _bubbleTrigger(tiggerCollection,NodeList,database,eventTrigger){
 		// };
 	});
 };
+
+function _replaceTopHandleCurrent(self, el) {
+	var handleNodeTree = self.handleNodeTree,
+		NodeList = self.NodeList;
+	self._packingBag = self._packingBag || NodeList[handleNodeTree.id].currentNode
+	NodeList[handleNodeTree.id].currentNode = el;
+	// self.reDraw();
+};
 ViewInstance.prototype = {
-	reDraw:function(){
+	reDraw: function() {
 		var self = this,
 			database = self._database;
 		// console.log(database)
-		$.forIn(database,function(val,key){
+		$.forIn(database, function(val, key) {
 			if (!/get|set/.test(key)) {
-				self.set(key,val);
+				self.set(key, val);
 			}
 		});
 	},
 	append: function(el) {
-		var handleNodeTree = this.handleNodeTree,
-			NodeList = this.NodeList;
-		$.forEach(handleNodeTree.childNodes,function(node,index,parentNode){
-			// console.log(node,parentNode);
-			if (!node.ignore) {
-				$.DOM.append(el,NodeList[node.id].currentNode);
-			}
+		var self = this,
+			handleNodeTree = self.handleNodeTree,
+			NodeList = self.NodeList,
+			currentTopNode = NodeList[handleNodeTree.id].currentNode;
+
+		$.forEach(currentTopNode.childNodes, function(child_node) {
+			$.DOM.append(el, child_node);
 		});
-		// this._packingBag = NodeList[handleNodeTree.id].currentNode
-		this._packingBag = this._packingBag||NodeList[handleNodeTree.id].currentNode
-		NodeList[handleNodeTree.id].currentNode = el;
-		this.reDraw();
+		_replaceTopHandleCurrent(self, el)
 	},
-	insert:function(el){
-		var handleNodeTree = this.handleNodeTree,
-			NodeList = this.NodeList,
+	insert: function(el) {
+		var self = this,
+			handleNodeTree = self.handleNodeTree,
+			NodeList = self.NodeList,
+			currentTopNode = NodeList[handleNodeTree.id].currentNode,
 			elParentNode = el.parentNode;
-		$.forEach(handleNodeTree.childNodes,function(node,index,parentNode){
-			// console.log(node,parentNode);
-			if (!node.ignore) {
-				$.DOM.insertBefore(elParentNode,NodeList[node.id].currentNode,el);
-			}
+
+		$.forEach(currentTopNode.childNodes, function(child_node) {
+			$.DOM.insertBefore(elParentNode, child_node, el);
 		});
-		this._packingBag = this._packingBag||NodeList[handleNodeTree.id].currentNode
-		// console.log("_packingBag:",handleNodeTree.id,this._packingBag)
-		NodeList[handleNodeTree.id].currentNode = elParentNode;
-		this.reDraw();
+		_replaceTopHandleCurrent(self, elParentNode)
 	},
-	remove:function(){
+	remove: function() {
 		// console.log(this._packingBag)
 		if (this._packingBag) {
 			this.append(this._packingBag)
-			this._packingBag = undefined;//when be undefined,can't no be remove again. --> it should be insert
+			this._packingBag = undefined; //when be undefined,can't no be remove again. --> it should be insert
 		}
 	},
 	// _database: null,
@@ -491,9 +475,8 @@ ViewInstance.prototype = {
 		if (oldValue != value) {
 			self._database[key] = value;
 		}
-		if (this._packingBag) {//_packingBag no null --> has be insert!
-			_bubbleTrigger.apply(self,[self._triggers[key],NodeList,database])
-		}
+
+		_bubbleTrigger.apply(self, [self._triggers[key], NodeList, database])
 	}
 };
 var _parse = function(node) {//get all childNodes
@@ -735,7 +718,7 @@ var V = global.ViewParser = {
 };
 V.registerHandle("", function(handle, index, parentHandle) {
 	var textHandle = handle.childNodes[0];
-	if (parentHandle.type !== "handle") {
+	if (parentHandle.type !== "handle") {//is textNode
 		var i = 0;
 		do {
 			i += 1;
@@ -756,7 +739,6 @@ V.registerHandle("", function(handle, index, parentHandle) {
 		}
 	} else {
 		if (textHandle) {
-			// console.log("ignore",textHandle)
 			textHandle.ignore = true;
 		}
 	}
@@ -821,10 +803,10 @@ V.registerHandle("#each", function(handle, index, parentHandle) {
 		$.push(eachModuleHandle.childNodes, childHandle);
 	}, index + 1);
 
-	parentHandle.childNodes.splice(index + 1, endIndex - index - 1);//Pulled out
-	V.eachModules[handle.id] = View(eachModuleHandle);//Compiled into new View module
+	parentHandle.childNodes.splice(index + 1, endIndex - index - 1); //Pulled out
+	V.eachModules[handle.id] = View(eachModuleHandle); //Compiled into new View module
 
-	handle.display = _each_display;//Custom rendering function
+	handle.display = _each_display; //Custom rendering function
 	_commentPlaceholder(handle, parentHandle);
 });
 V.registerHandle("/each", placeholderHandle);

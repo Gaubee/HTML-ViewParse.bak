@@ -1,6 +1,6 @@
 V.registerHandle("", function(handle, index, parentHandle) {
 	var textHandle = handle.childNodes[0];
-	if (parentHandle.type !== "handle") {
+	if (parentHandle.type !== "handle") {//is textNode
 		var i = 0;
 		do {
 			i += 1;
@@ -21,7 +21,6 @@ V.registerHandle("", function(handle, index, parentHandle) {
 		}
 	} else {
 		if (textHandle) {
-			// console.log("ignore",textHandle)
 			textHandle.ignore = true;
 		}
 	}
@@ -86,10 +85,10 @@ V.registerHandle("#each", function(handle, index, parentHandle) {
 		$.push(eachModuleHandle.childNodes, childHandle);
 	}, index + 1);
 
-	parentHandle.childNodes.splice(index + 1, endIndex - index - 1);//Pulled out
-	V.eachModules[handle.id] = View(eachModuleHandle);//Compiled into new View module
+	parentHandle.childNodes.splice(index + 1, endIndex - index - 1); //Pulled out
+	V.eachModules[handle.id] = View(eachModuleHandle); //Compiled into new View module
 
-	handle.display = _each_display;//Custom rendering function
+	handle.display = _each_display; //Custom rendering function
 	_commentPlaceholder(handle, parentHandle);
 });
 V.registerHandle("/each", placeholderHandle);
