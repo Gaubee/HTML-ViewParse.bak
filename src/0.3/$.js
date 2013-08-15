@@ -8,26 +8,10 @@ var $ = {
 	uid: function() {
 		return this.id = this.id + 1;
 	},
-	isString:function(str){
+	isString: function(str) {
 		var start = str.charAt(0);
-		return (start === str.charAt(str.length - 1)) && "\'\"".indexOf(start) !== -1
+		return (start === str.charAt(str.length - 1)) && "\'\"".indexOf(start) !== -1;
 	},
-	// trim: function(str) {
-	// 	whitespace = ' \n\r\t\f\x0b\xa0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u2028\u2029\u3000';
-	// 	for (var i = 0, len = str.length; i < len; i++) {
-	// 		if (whitespace.indexOf(str.charAt(i)) === -1) {
-	// 			str = str.substring(i);
-	// 			break;
-	// 		}
-	// 	}
-	// 	for (i = str.length - 1; i >= 0; i--) {
-	// 		if (whitespace.indexOf(str.charAt(i)) === -1) {
-	// 			str = str.substring(0, i + 1);
-	// 			break;
-	// 		}
-	// 	}
-	// 	return whitespace.indexOf(str.charAt(0)) === -1 ? str : '';
-	// },
 	trim: function(str) {
 		str = str.replace(/^\s\s*/, '')
 		var ws = /\s/,
@@ -64,15 +48,6 @@ var $ = {
 	insert: function(arr, index, item) {
 		arr.splice(index, 0, item);
 	},
-	// insertBefore: function(arr, beforItem, item) {
-	// 	for (var i = 0; i < arr.length; i += 1) {
-	// 		if (arr[i] === beforItem) {
-	// 			arr.splice(i, 0, item);
-	// 			break;
-	// 		}
-	// 	}
-	// 	return i;
-	// },
 	insertAfter: function(arr, afterItem, item) {
 		for (var i = 0; i < arr.length; i += 1) {
 			if (arr[i] === afterItem) {
@@ -118,15 +93,15 @@ var $ = {
 			callback(obj[i], i, obj);
 		}
 	},
-	reverseEach:function(arr,callback,i){
+	reverseEach: function(arr, callback, i) {
 		if (!arr) return;
-		return this._each($.slice(arr).reverse(), callback, arr.length-1-i)
+		return this._each($.slice(arr).reverse(), callback, arr.length - 1 - i)
 	},
 	forEach: function(arr, callback, i) {
 		if (!arr) return;
 		return this._each($.slice(arr), callback, i)
 	},
-	_each:function(arr,callback,i){
+	_each: function(arr, callback, i) {
 		for (i = i || 0; i < arr.length; i += 1) {
 			if (callback(arr[i], i, arr) === false) break;
 		}
@@ -141,7 +116,7 @@ var $ = {
 		},
 		insertBefore: function(parentNode, insertNode, beforNode) {
 			// try{
-			parentNode.insertBefore(insertNode, beforNode||null);
+			parentNode.insertBefore(insertNode, beforNode || null);
 			// }catch(e){}
 		},
 		append: function(parentNode, node) {

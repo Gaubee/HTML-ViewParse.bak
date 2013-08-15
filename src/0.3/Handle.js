@@ -1,3 +1,7 @@
+
+/*
+ * parse function
+ */
 var _parse = function(node) {//get all childNodes
 	var result = [];
 	for (var i = 0, child_node, childNodes = node.childNodes; child_node = childNodes[i]; i += 1) {
@@ -122,6 +126,3 @@ function CommentHandle(node) {
 CommentHandle.prototype = Handle("comment", {
 	nodeType: 8
 })
-/*
- * parse function
- */

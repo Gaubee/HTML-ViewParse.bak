@@ -14,10 +14,7 @@ function View(arg) {
 
 	_buildHandler.call(self);
 	_buildTrigger.call(self);
-	// _traversal(this.handleNodeTree, function(node, index, parentNode) {
-	// 	View.u[node.id] = node;
-	// });
-	// return $.bind(_create, this);
+
 	return function(data) {
 		return _create.call(self, data);
 	}
@@ -38,7 +35,6 @@ function _buildHandler(handleNodeTree) {
 				handle && $.push(handles, handle);
 			}
 		}
-		// console.log(item_node);
 	});
 };
 var _attrRegExp = /(\S+)=["']?((?:.(?!["']?\s+(?:\S+)=|[>"']))+.)["']?/g;
@@ -72,7 +68,7 @@ var IEfix = {
 	valign: "vAlign",
 	vspace: "vSpace"
 };
-
+var _comment_reg = /<!--[\w\W]*?-->/g;
 function _buildTrigger(handleNodeTree) {
 	var self = this,
 		triggers = self._triggers;
@@ -103,9 +99,9 @@ function _buildTrigger(handleNodeTree) {
 				// console.log("attr item:", attrStr)
 				var attrInfo = attrStr.search("="),
 					attrKey = $.trim(attrStr.substring(0, attrInfo)),
-					attrValue = node.getAttribute(attrKey),
-					attrKey = attrKey.toLowerCase(),
-					attrKey = attrKey.indexOf(V.prefix) ? attrKey : attrKey.replace(V.prefix, ""),
+					attrValue = node.getAttribute(attrKey)
+					attrKey = attrKey.toLowerCase()
+					attrKey = attrKey.indexOf(V.prefix) ? attrKey : attrKey.replace(V.prefix, "")
 					attrKey = (_isIE && IEfix[attrKey]) || attrKey
 
 				if (_matchRule.test(attrValue)) {
@@ -116,27 +112,31 @@ function _buildTrigger(handleNodeTree) {
 						if (key && key !== ".") {
 							$.forEach(triggerCollection, function(trigger) {
 								var _newTrigger = $.create(trigger);
-								_newTrigger.bubble = false;//this kind of Parent Handle can not be bubbling trigger.
+								_newTrigger.bubble = false; //this kind of Parent Handle can not be bubbling trigger.
 								_newTrigger.event = function(NodeList, database, eventTrigger) {
 									$.forIn(attrViewInstance._triggers, function(attrTriggerCollection, attrTriggerKey) {
-										attrViewInstance.set(attrTriggerKey,database[attrTriggerKey]);
+										attrViewInstance.set(attrTriggerKey, database[attrTriggerKey]);
 									});
+									console.log(attrKey,attrValue,_ = _shadowDIV)
 									var currentNode = NodeList[handle.id].currentNode,
-										attrValue = _shadowDIV.innerText;
-
+										attrOuter = _shadowDIV.innerText;
+									if (attrOuter === undefined) {
+										attrOuter = _shadowDIV.innerHTML.replace(_comment_reg,"");
+									}
 									if (attrKey === "style" && _isIE) {
-										currentNode.style.setAttribute('cssText', attrValue);
+										currentNode.style.setAttribute('cssText', attrOuter);
 									} else if (attrKey.indexOf("on") === 0 && _event_by_fun) {
-										currentNode.setAttribute(attrKey, Function(attrValue));
+										console.log(attrKey,attrOuter)
+										currentNode.setAttribute(attrKey, Function(attrOuter));
 										if (typeof currentNode.getAttribute(attrKey) === "string") {
 											_event_by_fun = false;
-											currentNode.setAttribute(attrKey, attrValue);
+											currentNode.setAttribute(attrKey, attrOuter);
 										}
 									} else {
-										currentNode.setAttribute(attrKey, attrValue);
+										currentNode.setAttribute(attrKey, attrOuter);
 									}
 								};
-								
+
 								$.unshift((triggers[key] = triggers[key] || []), _newTrigger); //Storage as key -> array
 								$.push(handle._triggers, _newTrigger); //Storage as array
 							})
@@ -161,9 +161,9 @@ function _create(data) {
 			var currentParentNode = NodeList_of_ViewInstance[parentNode.id].currentNode || topNode.currentNode;
 			var currentNode = node.currentNode = $.DOM.clone(node.node);
 			$.DOM.append(currentParentNode, currentNode);
-		}else{
+		} else {
 
-			_traversal(node,function(node){//ignore Node's childNodes will be ignored too.
+			_traversal(node, function(node) { //ignore Node's childNodes will be ignored too.
 				node = $.pushByID(NodeList_of_ViewInstance, $.create(node));
 			});
 			return false

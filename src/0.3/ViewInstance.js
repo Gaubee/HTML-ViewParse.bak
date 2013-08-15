@@ -32,26 +32,11 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 function _bubbleTrigger(tiggerCollection, NodeList, database, eventTrigger) {
 	var self = this;
 	$.forEach(tiggerCollection, function(trigger) {
-		// if (trigger.chain) {
-		// 	console.log("key:",trigger.key,trigger,",chain!!")
-		// 	var chainTriggers = self._triggers[trigger.key],
-		// 		index = $.indexOf(chainTriggers,trigger);
-		// 	for(var i = 0;i<index;i+=1){
-
-		// 	}
-		// }
 		trigger.event(NodeList, database, eventTrigger);
 		if (trigger.bubble) {
 			var parentNode = NodeList[trigger.handleId].parentNode;
 			parentNode && _bubbleTrigger.apply(self, [parentNode._triggers, NodeList, database, trigger]);
 		}
-		// if (trigger.chain) {
-		// 	$.forEach(chainTriggers,function(chain_trigger){
-		// 		console.log("chain:",chain_trigger)
-		// 		chain_trigger.event(NodeList,database,trigger);
-		// 	},index+1);
-		// 	console.log(index,chainTriggers);
-		// };
 	});
 };
 
@@ -103,8 +88,6 @@ ViewInstance.prototype = {
 			this._packingBag = undefined; //when be undefined,can't no be remove again. --> it should be insert
 		}
 	},
-	// _database: null,
-	// _triggers: null,
 	get: function get(key) {
 		var self = this,
 			database = self._database

@@ -192,7 +192,7 @@ var _equal = function(handle, index, parentHandle) { //Equal
 		}
 	}
 	return trigger;
-}
+};
 V.registerTrigger("equa", _equal);
 V.registerTrigger("==", _equal);
 var _nagete = function(handle, index, parentHandle) { //Negate
@@ -206,6 +206,6 @@ var _nagete = function(handle, index, parentHandle) { //Negate
 		}
 	}
 	return trigger;
-}
+};
 V.registerTrigger("nega", _nagete);
 V.registerTrigger("!", _nagete);

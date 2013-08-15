@@ -66,6 +66,7 @@ var V = global.ViewParser = {
 				});
 			}
 		});
+
 		$.forEach(insertBefore, function(item) {
 			var node = item.baseNode,
 				parentNode = item.parentNode

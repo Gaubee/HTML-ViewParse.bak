@@ -10,26 +10,10 @@ var $ = {
 	uid: function() {
 		return this.id = this.id + 1;
 	},
-	isString:function(str){
+	isString: function(str) {
 		var start = str.charAt(0);
-		return (start === str.charAt(str.length - 1)) && "\'\"".indexOf(start) !== -1
+		return (start === str.charAt(str.length - 1)) && "\'\"".indexOf(start) !== -1;
 	},
-	// trim: function(str) {
-	// 	whitespace = ' \n\r\t\f\x0b\xa0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u2028\u2029\u3000';
-	// 	for (var i = 0, len = str.length; i < len; i++) {
-	// 		if (whitespace.indexOf(str.charAt(i)) === -1) {
-	// 			str = str.substring(i);
-	// 			break;
-	// 		}
-	// 	}
-	// 	for (i = str.length - 1; i >= 0; i--) {
-	// 		if (whitespace.indexOf(str.charAt(i)) === -1) {
-	// 			str = str.substring(0, i + 1);
-	// 			break;
-	// 		}
-	// 	}
-	// 	return whitespace.indexOf(str.charAt(0)) === -1 ? str : '';
-	// },
 	trim: function(str) {
 		str = str.replace(/^\s\s*/, '')
 		var ws = /\s/,
@@ -66,15 +50,6 @@ var $ = {
 	insert: function(arr, index, item) {
 		arr.splice(index, 0, item);
 	},
-	// insertBefore: function(arr, beforItem, item) {
-	// 	for (var i = 0; i < arr.length; i += 1) {
-	// 		if (arr[i] === beforItem) {
-	// 			arr.splice(i, 0, item);
-	// 			break;
-	// 		}
-	// 	}
-	// 	return i;
-	// },
 	insertAfter: function(arr, afterItem, item) {
 		for (var i = 0; i < arr.length; i += 1) {
 			if (arr[i] === afterItem) {
@@ -120,15 +95,15 @@ var $ = {
 			callback(obj[i], i, obj);
 		}
 	},
-	reverseEach:function(arr,callback,i){
+	reverseEach: function(arr, callback, i) {
 		if (!arr) return;
-		return this._each($.slice(arr).reverse(), callback, arr.length-1-i)
+		return this._each($.slice(arr).reverse(), callback, arr.length - 1 - i)
 	},
 	forEach: function(arr, callback, i) {
 		if (!arr) return;
 		return this._each($.slice(arr), callback, i)
 	},
-	_each:function(arr,callback,i){
+	_each: function(arr, callback, i) {
 		for (i = i || 0; i < arr.length; i += 1) {
 			if (callback(arr[i], i, arr) === false) break;
 		}
@@ -143,7 +118,7 @@ var $ = {
 		},
 		insertBefore: function(parentNode, insertNode, beforNode) {
 			// try{
-			parentNode.insertBefore(insertNode, beforNode||null);
+			parentNode.insertBefore(insertNode, beforNode || null);
 			// }catch(e){}
 		},
 		append: function(parentNode, node) {
@@ -192,10 +167,7 @@ function View(arg) {
 
 	_buildHandler.call(self);
 	_buildTrigger.call(self);
-	// _traversal(this.handleNodeTree, function(node, index, parentNode) {
-	// 	View.u[node.id] = node;
-	// });
-	// return $.bind(_create, this);
+
 	return function(data) {
 		return _create.call(self, data);
 	}
@@ -216,7 +188,6 @@ function _buildHandler(handleNodeTree) {
 				handle && $.push(handles, handle);
 			}
 		}
-		// console.log(item_node);
 	});
 };
 var _attrRegExp = /(\S+)=["']?((?:.(?!["']?\s+(?:\S+)=|[>"']))+.)["']?/g;
@@ -250,7 +221,7 @@ var IEfix = {
 	valign: "vAlign",
 	vspace: "vSpace"
 };
-
+var _comment_reg = /<!--[\w\W]*?-->/g;
 function _buildTrigger(handleNodeTree) {
 	var self = this,
 		triggers = self._triggers;
@@ -281,9 +252,9 @@ function _buildTrigger(handleNodeTree) {
 				// console.log("attr item:", attrStr)
 				var attrInfo = attrStr.search("="),
 					attrKey = $.trim(attrStr.substring(0, attrInfo)),
-					attrValue = node.getAttribute(attrKey),
-					attrKey = attrKey.toLowerCase(),
-					attrKey = attrKey.indexOf(V.prefix) ? attrKey : attrKey.replace(V.prefix, ""),
+					attrValue = node.getAttribute(attrKey)
+					attrKey = attrKey.toLowerCase()
+					attrKey = attrKey.indexOf(V.prefix) ? attrKey : attrKey.replace(V.prefix, "")
 					attrKey = (_isIE && IEfix[attrKey]) || attrKey
 
 				if (_matchRule.test(attrValue)) {
@@ -294,27 +265,31 @@ function _buildTrigger(handleNodeTree) {
 						if (key && key !== ".") {
 							$.forEach(triggerCollection, function(trigger) {
 								var _newTrigger = $.create(trigger);
-								_newTrigger.bubble = false;//this kind of Parent Handle can not be bubbling trigger.
+								_newTrigger.bubble = false; //this kind of Parent Handle can not be bubbling trigger.
 								_newTrigger.event = function(NodeList, database, eventTrigger) {
 									$.forIn(attrViewInstance._triggers, function(attrTriggerCollection, attrTriggerKey) {
-										attrViewInstance.set(attrTriggerKey,database[attrTriggerKey]);
+										attrViewInstance.set(attrTriggerKey, database[attrTriggerKey]);
 									});
+									console.log(attrKey,attrValue,_ = _shadowDIV)
 									var currentNode = NodeList[handle.id].currentNode,
-										attrValue = _shadowDIV.innerText;
-
+										attrOuter = _shadowDIV.innerText;
+									if (attrOuter === undefined) {
+										attrOuter = _shadowDIV.innerHTML.replace(_comment_reg,"");
+									}
 									if (attrKey === "style" && _isIE) {
-										currentNode.style.setAttribute('cssText', attrValue);
+										currentNode.style.setAttribute('cssText', attrOuter);
 									} else if (attrKey.indexOf("on") === 0 && _event_by_fun) {
-										currentNode.setAttribute(attrKey, Function(attrValue));
+										console.log(attrKey,attrOuter)
+										currentNode.setAttribute(attrKey, Function(attrOuter));
 										if (typeof currentNode.getAttribute(attrKey) === "string") {
 											_event_by_fun = false;
-											currentNode.setAttribute(attrKey, attrValue);
+											currentNode.setAttribute(attrKey, attrOuter);
 										}
 									} else {
-										currentNode.setAttribute(attrKey, attrValue);
+										currentNode.setAttribute(attrKey, attrOuter);
 									}
 								};
-								
+
 								$.unshift((triggers[key] = triggers[key] || []), _newTrigger); //Storage as key -> array
 								$.push(handle._triggers, _newTrigger); //Storage as array
 							})
@@ -339,9 +314,9 @@ function _create(data) {
 			var currentParentNode = NodeList_of_ViewInstance[parentNode.id].currentNode || topNode.currentNode;
 			var currentNode = node.currentNode = $.DOM.clone(node.node);
 			$.DOM.append(currentParentNode, currentNode);
-		}else{
+		} else {
 
-			_traversal(node,function(node){//ignore Node's childNodes will be ignored too.
+			_traversal(node, function(node) { //ignore Node's childNodes will be ignored too.
 				node = $.pushByID(NodeList_of_ViewInstance, $.create(node));
 			});
 			return false
@@ -389,26 +364,11 @@ var ViewInstance = function(handleNodeTree, NodeList, triggers, database) {
 function _bubbleTrigger(tiggerCollection, NodeList, database, eventTrigger) {
 	var self = this;
 	$.forEach(tiggerCollection, function(trigger) {
-		// if (trigger.chain) {
-		// 	console.log("key:",trigger.key,trigger,",chain!!")
-		// 	var chainTriggers = self._triggers[trigger.key],
-		// 		index = $.indexOf(chainTriggers,trigger);
-		// 	for(var i = 0;i<index;i+=1){
-
-		// 	}
-		// }
 		trigger.event(NodeList, database, eventTrigger);
 		if (trigger.bubble) {
 			var parentNode = NodeList[trigger.handleId].parentNode;
 			parentNode && _bubbleTrigger.apply(self, [parentNode._triggers, NodeList, database, trigger]);
 		}
-		// if (trigger.chain) {
-		// 	$.forEach(chainTriggers,function(chain_trigger){
-		// 		console.log("chain:",chain_trigger)
-		// 		chain_trigger.event(NodeList,database,trigger);
-		// 	},index+1);
-		// 	console.log(index,chainTriggers);
-		// };
 	});
 };
 
@@ -460,8 +420,6 @@ ViewInstance.prototype = {
 			this._packingBag = undefined; //when be undefined,can't no be remove again. --> it should be insert
 		}
 	},
-	// _database: null,
-	// _triggers: null,
 	get: function get(key) {
 		var self = this,
 			database = self._database
@@ -479,6 +437,10 @@ ViewInstance.prototype = {
 		_bubbleTrigger.apply(self, [self._triggers[key], NodeList, database])
 	}
 };
+
+/*
+ * parse function
+ */
 var _parse = function(node) {//get all childNodes
 	var result = [];
 	for (var i = 0, child_node, childNodes = node.childNodes; child_node = childNodes[i]; i += 1) {
@@ -604,9 +566,6 @@ CommentHandle.prototype = Handle("comment", {
 	nodeType: 8
 })
 /*
- * parse function
- */
-/*
  * parse rule
  */
 var _placeholder = function() {
@@ -674,6 +633,7 @@ var V = global.ViewParser = {
 				});
 			}
 		});
+
 		$.forEach(insertBefore, function(item) {
 			var node = item.baseNode,
 				parentNode = item.parentNode
@@ -1004,7 +964,7 @@ var _equal = function(handle, index, parentHandle) { //Equal
 		}
 	}
 	return trigger;
-}
+};
 V.registerTrigger("equa", _equal);
 V.registerTrigger("==", _equal);
 var _nagete = function(handle, index, parentHandle) { //Negate
@@ -1018,9 +978,10 @@ var _nagete = function(handle, index, parentHandle) { //Negate
 		}
 	}
 	return trigger;
-}
+};
 V.registerTrigger("nega", _nagete);
 V.registerTrigger("!", _nagete);
+
 // Avoid `console` errors in browsers that lack a console.
 (function() {
     var method;

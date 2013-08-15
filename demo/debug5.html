@@ -32,8 +32,8 @@
 </script>
 <script type="text/template" name="fork-me">
 	<hr />
-	name:<input onchange="{(viewName)}.set('who',this.value)"/>
-	<input onclick="if(controller.{(who)})controller.{(who)}.changeSex()" value="change sex!" type="button">
+	name:<input id="xx" onchange="{(viewName)}.set('who',this.value)"/>
+	<!----><input onclick="if(controller.{(who)})controller.{(who)}.changeSex()" value="change sex!" type="button">
 </script>
 </html>
 <script type="text/javascript">
@@ -43,8 +43,8 @@
 	// sim = Sim();
 </script>
 <script type="text/javascript">
-	this.Tool = {}
-	!(function($){
+	this.Tool = {};
+	(function($){
 		function __proto__(){};
 		$.create = function(proto){
 			__proto__.prototype = proto;
@@ -67,6 +67,7 @@
 	}];
 	b = document.body
 
+
 	ViewParser.scans();
 
 	var People = ViewParser.modules["people"],
@@ -84,7 +85,7 @@
 		})
 		;
 	fm.append(document.body);
-	fm.set("viewName","fm");
+
 	var controller = {};
 	
 	(function(C){
