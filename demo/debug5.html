@@ -3,6 +3,7 @@
 <head>
 	<title>HTML-ViewParse</title>
 	<script type="text/javascript" src="../build/0.3/HTML-ViewParse.debug.js"></script>
+	<!-- // <script type="text/javascript" src="https://getfirebug.com/firebug-lite.js"></script> -->
 </head>
 <body>
 </body>
@@ -32,10 +33,11 @@
 </script>
 <script type="text/template" name="fork-me">
 	<hr />
-	name:<input id="xx" onchange="{(viewName)}.set('who',this.value)"/>
+	name:<input id="xx" onchange="{(viewName)}.set('who',this.value);"/>{(who)}
+	<br />
 	<!----><input onclick="if(controller.{(who)})controller.{(who)}.changeSex()" value="change sex!" type="button">
-	<input onclick="controller.addMember('{(who)}')" value="add members!" type="button">
-	<input onclick="controller.removeMember('{(who)}')" value="remove members!" type="button">
+	<input attr-onclick="controller.addMember('{(who)}')" value="add members({(who)})!" type="button">
+	<input attr-onclick="controller.removeMember('{(who)}')" value="remove members({(who)})!" type="button">
 </script>
 </html>
 <script type="text/javascript">

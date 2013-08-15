@@ -5,6 +5,7 @@ var shadowDIV = document.createElement("div");
 var $ = {
 	id: 100,
 	uidAvator: Math.random().toString(36).substring(2),
+	noop:function(){},
 	uid: function() {
 		return this.id = this.id + 1;
 	},
@@ -277,8 +278,12 @@ function _buildTrigger(handleNodeTree) {
 									if (attrKey === "style" && _isIE) {
 										currentNode.style.setAttribute('cssText', attrOuter);
 									} else if (attrKey.indexOf("on") === 0 && _event_by_fun) {
-										
-										currentNode.setAttribute(attrKey, Function(attrOuter));
+										try{
+											var attrOuterEvent  = Function(attrOuter);
+										}catch(e){
+											attrOuterEvent = $.noop;
+										}
+										currentNode.setAttribute(attrKey, attrOuterEvent);
 										if (typeof currentNode.getAttribute(attrKey) === "string") {
 											_event_by_fun = false;
 											currentNode.setAttribute(attrKey, attrOuter);

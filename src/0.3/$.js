@@ -5,6 +5,7 @@ var shadowDIV = document.createElement("div");
 var $ = {
 	id: 100,
 	uidAvator: Math.random().toString(36).substring(2),
+	noop:function(){},
 	uid: function() {
 		return this.id = this.id + 1;
 	},

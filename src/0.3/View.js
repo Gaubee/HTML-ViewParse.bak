@@ -126,8 +126,12 @@ function _buildTrigger(handleNodeTree) {
 									if (attrKey === "style" && _isIE) {
 										currentNode.style.setAttribute('cssText', attrOuter);
 									} else if (attrKey.indexOf("on") === 0 && _event_by_fun) {
-										
-										currentNode.setAttribute(attrKey, Function(attrOuter));
+										try{
+											var attrOuterEvent  = Function(attrOuter);
+										}catch(e){
+											attrOuterEvent = $.noop;
+										}
+										currentNode.setAttribute(attrKey, attrOuterEvent);
 										if (typeof currentNode.getAttribute(attrKey) === "string") {
 											_event_by_fun = false;
 											currentNode.setAttribute(attrKey, attrOuter);
